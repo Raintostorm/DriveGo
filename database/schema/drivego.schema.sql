@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS student_profiles (
   phone VARCHAR(32),
   license_class VARCHAR(16),
   center_id UUID REFERENCES training_centers(id),
-  premium_until TIMESTAMPTZ
+  premium_until TIMESTAMPTZ,
+  held_licenses JSONB NOT NULL DEFAULT '[]'::jsonb
 );
 
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
@@ -48,7 +49,9 @@ CREATE TABLE IF NOT EXISTS study_chapters (
   license_class_id UUID REFERENCES license_classes(id),
   title VARCHAR(255) NOT NULL,
   sort_order INT NOT NULL DEFAULT 0,
-  duration_minutes INT
+  duration_minutes INT,
+  video_url TEXT,
+  description TEXT
 );
 
 CREATE TABLE IF NOT EXISTS study_progress (
@@ -159,6 +162,30 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   role VARCHAR(16) NOT NULL CHECK (role IN ('user', 'assistant')),
   content TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS license_applications (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  license_class VARCHAR(16) NOT NULL DEFAULT 'B2',
+  center_id UUID REFERENCES training_centers(id),
+  status VARCHAR(32) NOT NULL DEFAULT 'draft',
+  personal_info JSONB NOT NULL DEFAULT '{}'::jsonb,
+  submitted_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS application_documents (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  application_id UUID NOT NULL REFERENCES license_applications(id) ON DELETE CASCADE,
+  doc_type VARCHAR(32) NOT NULL,
+  slot_index INT NOT NULL DEFAULT 0,
+  file_path TEXT NOT NULL,
+  original_name VARCHAR(255),
+  mime_type VARCHAR(128),
+  uploaded_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(application_id, doc_type, slot_index)
 );
 
 CREATE TABLE IF NOT EXISTS lookup_records (

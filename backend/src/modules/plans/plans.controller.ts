@@ -1,10 +1,12 @@
 import { Controller, Get } from "@nestjs/common"
-import { dbNotConfigured } from "../../common/db-not-configured"
+import { PlansService } from "./plans.service"
 
 @Controller("plans")
 export class PlansController {
+  constructor(private readonly service: PlansService) {}
+
   @Get()
   list() {
-    dbNotConfigured("plans.list")
+    return this.service.list()
   }
 }

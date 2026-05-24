@@ -120,6 +120,16 @@ export const routeConfig = [
     LazyPage: lazyNamed(() => import("./pages/ProfilePage.jsx"), "ProfilePage"),
   },
   {
+    path: "/application",
+    labelKey: "nav.application",
+    group: "app",
+    layout: "dashboard",
+    LazyPage: lazyNamed(
+      () => import("./pages/ApplicationPage.jsx"),
+      "ApplicationPage",
+    ),
+  },
+  {
     path: "/study-calendar",
     labelKey: "nav.studyCalendar",
     group: "app",

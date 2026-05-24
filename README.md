@@ -44,3 +44,10 @@ npm run dev:be       # chỉ backend
 ## Database
 
 Schema placeholder trong `database/schema/`. Khi có connection string, điền `.env` và chạy migration theo `database/README.md`.
+
+```bash
+npm run test:db   # kiểm tra kết nối
+npm run seed:db   # dữ liệu demo (xem database/seeds/README.md)
+```
+
+Tích hợp bên thứ ba (Firebase, thanh toán, AI): [docs/integrations.md](docs/integrations.md)

@@ -3,21 +3,31 @@ import { PageHeader } from "../components/PageHeader.jsx"
 import { PrimaryButton } from "../components/PrimaryButton.jsx"
 import { StatCard } from "../components/StatCard.jsx"
 import { UiCard } from "../components/UiCard.jsx"
+import { useAuth } from "../context/AuthContext.jsx"
+import { isPremiumActive } from "../lib/premium.js"
 import { t } from "../lib/strings.js"
 
-const quickStats = [
-  { labelKey: "pages.studentDashboard.statProgress", value: "45%", badge: "+5% tuần này" },
-  { labelKey: "pages.studentDashboard.statSessions", value: "12/30", badge: "+2 bài mới" },
-  { labelKey: "pages.studentDashboard.statScore", value: "8.5/10", badge: "Ổn định" },
-  { labelKey: "pages.studentDashboard.statStatus", value: "Premium", badge: "Đang hoạt động" },
-]
-
 export function StudentDashboardPage() {
+  const { user } = useAuth()
+  const displayName = user?.profile?.fullName || user?.email?.split("@")[0] || "bạn"
+  const premium = isPremiumActive(user)
+
+  const quickStats = [
+    { labelKey: "pages.studentDashboard.statProgress", value: "45%", badge: "+5% tuần này" },
+    { labelKey: "pages.studentDashboard.statSessions", value: "12/30", badge: "+2 bài mới" },
+    { labelKey: "pages.studentDashboard.statScore", value: "8.5/10", badge: "Ổn định" },
+    {
+      labelKey: "pages.studentDashboard.statStatus",
+      value: premium ? "Premium" : "Miễn phí",
+      badge: premium ? "Đang hoạt động" : "Nâng cấp",
+    },
+  ]
+
   return (
     <section>
       <PageHeader
         title={t("pages.studentDashboard.title")}
-        subtitle="Chào Minh Tuấn, hôm nay bạn đã sẵn sàng lái xe chưa?"
+        subtitle={`Chào ${displayName}, hôm nay bạn đã sẵn sàng lái xe chưa?`}
         actions={
           <>
             <span className="rounded-lg border border-drive-border-soft bg-drive-panel px-4 py-2 text-sm text-drive-text">
@@ -33,6 +43,15 @@ export function StudentDashboardPage() {
           </>
         }
       />
+
+      {!premium ? (
+        <p className="mb-4 rounded-drive border border-drive-action/40 bg-drive-action/10 px-4 py-3 text-sm text-drive-text">
+          Tài khoản miễn phí: tối đa 10 bài thi, AI Chat cần Premium.{" "}
+          <Link to="/upgrade" className="font-medium text-drive-action underline">
+            Nâng cấp ngay
+          </Link>
+        </p>
+      ) : null}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {quickStats.map(({ labelKey, value, badge }) => (

@@ -17,6 +17,11 @@ dist-ssr
 .env.*
 !.env.example
 
+# Firebase / secrets (never commit)
+*firebase-adminsdk*.json
+firebase.txt
+backend/secrets/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -30,3 +35,4 @@ dist-ssr
 
 # NestJS
 backend/dist
+backend/uploads/

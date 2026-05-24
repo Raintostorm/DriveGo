@@ -8,11 +8,18 @@
   ],
   "scripts": {
     "dev": "concurrently \"npm run dev -w frontend\" \"npm run start:dev -w backend\"",
+    "dev:all": "concurrently -n fe,be,ngrok -c blue,green,magenta \"npm run dev -w frontend\" \"npm run start:dev -w backend\" \"node scripts/ngrok.mjs\"",
     "dev:fe": "npm run dev -w frontend",
     "dev:be": "npm run start:dev -w backend",
     "build": "npm run build -w frontend && npm run build -w backend",
     "lint": "npm run lint -w frontend && npm run lint -w backend",
-    "test:db": "npm run test:connection -w database"
+    "test:db": "npm run test:connection -w database",
+    "seed:db": "npm run seed -w database",
+    "extend-premium": "node database/scripts/extend-premium.mjs",
+    "migrate:applications": "node database/scripts/run-migration.mjs database/migrations/001_applications.sql",
+    "migrate:videos": "node database/scripts/run-migration.mjs database/migrations/003_fix_chapter_videos.sql",
+    "migrate:profile": "node database/scripts/run-migration.mjs database/migrations/004_held_licenses.sql",
+    "setup:env": "node scripts/setup-env.mjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

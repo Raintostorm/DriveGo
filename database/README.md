@@ -21,6 +21,7 @@ database/
 ```bash
 # PostgreSQL ví dụ
 psql "$DATABASE_URL" -f database/schema/drivego.schema.sql
+npm run seed:db
 ```
 
 4. Báo Agent bật TypeORM/Prisma trong `backend/` và nối API thật.

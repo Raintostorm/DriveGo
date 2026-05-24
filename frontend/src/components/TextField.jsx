@@ -1,7 +1,20 @@
 /**
- * @param {{ id: string, label: string, type?: string, placeholder?: string, className?: string, icon?: string }} props
+ * @param {{ id: string, label: string, type?: string, placeholder?: string, className?: string, icon?: string, value?: string, onChange?: import('react').ChangeEventHandler<HTMLInputElement>, name?: string, required?: boolean, disabled?: boolean, autoComplete?: string }} props
  */
-export function TextField({ id, label, type = "text", placeholder, className = "", icon }) {
+export function TextField({
+  id,
+  label,
+  type = "text",
+  placeholder,
+  className = "",
+  icon,
+  value,
+  onChange,
+  name,
+  required,
+  disabled,
+  autoComplete,
+}) {
   return (
     <div className={className}>
       <label htmlFor={id} className="mb-2 block text-sm font-medium text-drive-text">
@@ -18,9 +31,15 @@ export function TextField({ id, label, type = "text", placeholder, className = "
         ) : null}
         <input
           id={id}
+          name={name}
           type={type}
+          value={value}
+          onChange={onChange}
           placeholder={placeholder}
-          className={`w-full rounded-drive-pill border border-drive-border bg-drive-elevated py-4 text-sm text-drive-text outline-none transition placeholder:text-drive-placeholder focus:ring-2 focus:ring-drive-accent ${icon ? "pl-11 pr-4" : "px-4"}`}
+          required={required}
+          disabled={disabled}
+          autoComplete={autoComplete}
+          className={`w-full rounded-drive-pill border border-drive-border bg-drive-elevated py-4 text-sm text-drive-text outline-none transition placeholder:text-drive-placeholder focus:ring-2 focus:ring-drive-accent disabled:opacity-60 ${icon ? "pl-11 pr-4" : "px-4"}`}
         />
       </div>
     </div>

@@ -1,20 +1,38 @@
-import { Body, Controller, Get, Param, Post } from "@nestjs/common"
-import { dbNotConfigured } from "../../common/db-not-configured"
+import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common"
+import { CurrentUser } from "../../common/current-user.decorator"
+import { AuthUser } from "../auth/jwt.strategy"
+import { JwtAuthGuard } from "../auth/jwt-auth.guard"
+import { ChatService } from "./chat.service"
 
 @Controller("chat")
 export class ChatController {
+  constructor(private readonly service: ChatService) {}
+
   @Post("sessions")
-  createSession() {
-    dbNotConfigured("chat.createSession")
+  @UseGuards(JwtAuthGuard)
+  createSession(@CurrentUser() user: AuthUser, @Body() body: { title?: string }) {
+    return this.service.createSession(user.userId, body.title)
   }
 
   @Get("sessions")
-  listSessions() {
-    dbNotConfigured("chat.listSessions")
+  @UseGuards(JwtAuthGuard)
+  listSessions(@CurrentUser() user: AuthUser) {
+    return this.service.listSessions(user.userId)
+  }
+
+  @Get("sessions/:id")
+  @UseGuards(JwtAuthGuard)
+  getSession(@CurrentUser() user: AuthUser, @Param("id") id: string) {
+    return this.service.getSession(user.userId, id)
   }
 
   @Post("sessions/:id/messages")
-  sendMessage(@Param("id") _id: string, @Body() _body: unknown) {
-    dbNotConfigured("chat.sendMessage")
+  @UseGuards(JwtAuthGuard)
+  sendMessage(
+    @CurrentUser() user: AuthUser,
+    @Param("id") id: string,
+    @Body() body: { content: string },
+  ) {
+    return this.service.sendMessage(user.userId, id, body.content ?? "")
   }
 }

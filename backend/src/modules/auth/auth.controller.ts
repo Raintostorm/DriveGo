@@ -1,21 +1,30 @@
 import { Body, Controller, Post } from "@nestjs/common"
-import { dbNotConfigured } from "../../common/db-not-configured"
-import { ForgotPasswordDto, LoginDto, RegisterDto } from "./dto/auth.dto"
+import { AuthService } from "./auth.service"
+import { ForgotPasswordDto, GoogleLoginDto, LoginDto, RegisterDto } from "./dto/auth.dto"
 
 @Controller("auth")
 export class AuthController {
+  constructor(private readonly authService: AuthService) {}
+
   @Post("register")
-  register(@Body() _body: RegisterDto) {
-    dbNotConfigured("auth.register")
+  register(@Body() body: RegisterDto) {
+    return this.authService.register(body)
   }
 
   @Post("login")
-  login(@Body() _body: LoginDto) {
-    dbNotConfigured("auth.login")
+  login(@Body() body: LoginDto) {
+    return this.authService.login(body)
+  }
+
+  @Post("google")
+  google(@Body() body: GoogleLoginDto) {
+    return this.authService.loginWithGoogle(body)
   }
 
   @Post("forgot-password")
   forgotPassword(@Body() _body: ForgotPasswordDto) {
-    dbNotConfigured("auth.forgot-password")
+    return {
+      message: "Tính năng gửi email reset mật khẩu sẽ được bật sau.",
+    }
   }
 }

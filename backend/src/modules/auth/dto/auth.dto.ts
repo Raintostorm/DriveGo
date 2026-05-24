@@ -7,8 +7,9 @@ export enum UserRole {
 }
 
 export class RegisterDto {
+  @IsOptional()
   @IsEnum(UserRole)
-  role!: UserRole
+  role?: UserRole
 
   @IsEmail()
   email!: string
@@ -38,4 +39,9 @@ export class LoginDto {
 export class ForgotPasswordDto {
   @IsEmail()
   email!: string
+}
+
+export class GoogleLoginDto {
+  @IsString()
+  idToken!: string
 }

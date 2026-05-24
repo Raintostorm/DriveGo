@@ -1,5 +1,5 @@
 /**
- * @param {{ children: import('react').ReactNode, className?: string, variant?: 'primary' | 'action' | 'outline' | 'ghost', type?: 'button' | 'submit', onClick?: () => void, fullWidth?: boolean }} props
+ * @param {{ children: import('react').ReactNode, className?: string, variant?: 'primary' | 'action' | 'outline' | 'ghost', type?: 'button' | 'submit', onClick?: () => void, fullWidth?: boolean, disabled?: boolean }} props
  */
 export function PrimaryButton({
   children,
@@ -8,6 +8,7 @@ export function PrimaryButton({
   type = "button",
   onClick,
   fullWidth,
+  disabled,
 }) {
   const base =
     "rounded-drive-pill px-6 py-3 text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-drive-accent focus:ring-offset-2 focus:ring-offset-drive-canvas disabled:opacity-60"
@@ -24,6 +25,7 @@ export function PrimaryButton({
     <button
       type={type}
       onClick={onClick}
+      disabled={disabled}
       className={`${base} ${variants[variant]} ${fullWidth ? "w-full" : ""} ${className}`.trim()}
     >
       {children}

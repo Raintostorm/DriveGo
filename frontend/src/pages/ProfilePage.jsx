@@ -1,82 +1,208 @@
+import { useEffect, useState } from "react"
+import { Link } from "react-router-dom"
 import { PageHeader } from "../components/PageHeader.jsx"
 import { PrimaryButton } from "../components/PrimaryButton.jsx"
 import { StatusBadge } from "../components/StatusBadge.jsx"
+import { TextField } from "../components/TextField.jsx"
 import { UiCard } from "../components/UiCard.jsx"
+import { useAuth } from "../context/AuthContext.jsx"
+import { apiFetch } from "../lib/api.js"
+import { formatPremiumDate, formatPremiumUntil, isPremiumActive } from "../lib/premium.js"
 import { t } from "../lib/strings.js"
 
-const activity = [
-  { exam: "Đề thi số 15 - B2", time: "15/10/2023", result: "Đạt (32/35)", pass: true },
-  { exam: "Đề thi số 14 - B2", time: "14/10/2023", result: "Không đạt (28/35)", pass: false },
-]
+const LICENSE_OPTIONS = ["A1", "A2", "B1", "B2", "C", "D", "E", "F"]
+
+const APP_STATUS_LABEL = {
+  draft: "Nháp — chưa nộp",
+  submitted: "Đã nộp — chờ xử lý",
+  reviewing: "Đang duyệt",
+  approved: "Đã duyệt",
+  rejected: "Từ chối",
+}
 
 export function ProfilePage() {
+  const { user, refreshUser } = useAuth()
+  const premium = isPremiumActive(user)
+  const [fullName, setFullName] = useState("")
+  const [phone, setPhone] = useState("")
+  const [targetClass, setTargetClass] = useState("B2")
+  const [heldLicenses, setHeldLicenses] = useState([])
+  const [saving, setSaving] = useState(false)
+  const [notice, setNotice] = useState(null)
+  const [error, setError] = useState(null)
+  const [appStatus, setAppStatus] = useState(null)
+  const [examEligible, setExamEligible] = useState(false)
+
+  useEffect(() => {
+    if (user?.profile?.fullName) setFullName(user.profile.fullName)
+    if (user?.profile?.phone) setPhone(user.profile.phone)
+    if (user?.profile?.licenseClass) setTargetClass(user.profile.licenseClass)
+    if (Array.isArray(user?.profile?.heldLicenses)) {
+      setHeldLicenses(user.profile.heldLicenses)
+    }
+  }, [user])
+
+  useEffect(() => {
+    apiFetch("/applications/me", { auth: true })
+      .then((data) => {
+        setExamEligible(Boolean(data?.examEligible))
+        setAppStatus(data?.application?.status ?? null)
+      })
+      .catch(() => {
+        setExamEligible(false)
+        setAppStatus(null)
+      })
+  }, [])
+
+  function toggleHeld(code) {
+    setHeldLicenses((prev) =>
+      prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code],
+    )
+  }
+
+  async function handleSave(e) {
+    e.preventDefault()
+    setSaving(true)
+    setError(null)
+    setNotice(null)
+    try {
+      await apiFetch("/users/me", {
+        method: "PATCH",
+        auth: true,
+        body: JSON.stringify({
+          fullName: fullName.trim(),
+          phone: phone.trim(),
+          licenseClass: targetClass,
+          heldLicenses,
+        }),
+      })
+      await refreshUser()
+      setNotice(t("pages.profile.saved"))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Lưu thất bại")
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <section className="space-y-6">
-      <PageHeader title={t("pages.profile.title")} subtitle={t("pages.profile.subtitle")} />
+      <PageHeader
+        title={t("pages.profile.title")}
+        subtitle={t("pages.profile.subtitleBasic")}
+      />
+
+      {notice ? (
+        <p className="rounded-drive border border-drive-success/40 bg-drive-success/10 px-4 py-3 text-sm text-drive-success">
+          {notice}
+        </p>
+      ) : null}
+      {error ? (
+        <p className="rounded-drive border border-drive-danger/40 bg-drive-danger/10 px-4 py-3 text-sm text-drive-danger">
+          {error}
+        </p>
+      ) : null}
 
       <UiCard variant="panel">
-        <div className="grid gap-6 sm:grid-cols-[120px_1fr_auto]">
-          <div className="flex size-28 items-center justify-center rounded-2xl border border-drive-border bg-drive-sidebar text-4xl">
-            👤
-          </div>
+        <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-white">Nguyễn Văn A</h2>
-            <p className="text-drive-muted">Học viên hạng B2 · Premium</p>
-            <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-              <p className="text-drive-text">Email: nguyenvana@example.com</p>
-              <p className="text-drive-text">Điện thoại: 0912 345 678</p>
-              <p className="text-drive-text">Tham gia: 12/10/2023</p>
-              <StatusBadge tone="success">{t("pages.profile.active")}</StatusBadge>
+            <h2 className="text-2xl font-bold text-white">{fullName || user?.email}</h2>
+            <p className="mt-1 text-sm text-drive-muted">{user?.email}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <StatusBadge tone={premium ? "success" : "neutral"}>
+                {premium ? `Premium · ${formatPremiumDate(user?.profile?.premiumUntil)}` : "Miễn phí"}
+              </StatusBadge>
+              {premium ? (
+                <span className="text-xs text-drive-muted">
+                  {formatPremiumUntil(user?.profile?.premiumUntil)}
+                </span>
+              ) : null}
             </div>
           </div>
-          <div className="flex flex-col gap-2 sm:items-end">
-            <PrimaryButton variant="outline">{t("common.edit")}</PrimaryButton>
-            <PrimaryButton variant="action">{t("pages.profile.changePassword")}</PrimaryButton>
-          </div>
+          {!premium ? (
+            <Link to="/upgrade">
+              <PrimaryButton variant="outline">Nâng cấp Premium</PrimaryButton>
+            </Link>
+          ) : null}
         </div>
       </UiCard>
 
       <UiCard variant="panel">
-        <div className="mb-4 flex justify-between">
-          <h3 className="font-semibold text-white">{t("pages.profile.recentActivity")}</h3>
-          <button type="button" className="text-sm font-medium text-drive-action hover:underline">
-            {t("common.viewAll")}
-          </button>
-        </div>
-        <table className="w-full text-left text-sm">
-          <thead className="text-drive-muted">
-            <tr>
-              <th className="pb-2">Bài thi</th>
-              <th>Thời gian</th>
-              <th>Kết quả</th>
-            </tr>
-          </thead>
-          <tbody>
-            {activity.map((row) => (
-              <tr key={row.exam} className="border-t border-drive-border-soft text-drive-text">
-                <td className="py-3">{row.exam}</td>
-                <td>{row.time}</td>
-                <td>
-                  <StatusBadge tone={row.pass ? "success" : "danger"}>{row.result}</StatusBadge>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <h3 className="font-semibold text-white">{t("pages.profile.basicInfo")}</h3>
+        <form className="mt-4 grid gap-3 sm:grid-cols-2" onSubmit={handleSave}>
+          <TextField
+            id="profileName"
+            label="Họ và tên"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+          />
+          <TextField
+            id="profilePhone"
+            label="Số điện thoại"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+          />
+          <TextField
+            id="profileTarget"
+            label={t("pages.profile.targetClass")}
+            value={targetClass}
+            onChange={(e) => setTargetClass(e.target.value)}
+          />
+          <div className="sm:col-span-2">
+            <p className="mb-2 text-sm font-medium text-drive-text">{t("pages.profile.heldLicenses")}</p>
+            <p className="mb-3 text-xs text-drive-muted">{t("pages.profile.heldLicensesHint")}</p>
+            <div className="flex flex-wrap gap-2">
+              {LICENSE_OPTIONS.map((code) => {
+                const on = heldLicenses.includes(code)
+                return (
+                  <button
+                    key={code}
+                    type="button"
+                    onClick={() => toggleHeld(code)}
+                    className={`rounded-drive-pill border px-3 py-1.5 text-sm font-medium transition ${
+                      on
+                        ? "border-drive-success bg-drive-success/15 text-drive-success"
+                        : "border-drive-border text-drive-muted hover:border-drive-action/50"
+                    }`}
+                  >
+                    {code}
+                  </button>
+                )
+              })}
+            </div>
+            {heldLicenses.length === 0 ? (
+              <p className="mt-2 text-xs text-drive-muted">{t("pages.profile.noHeldLicense")}</p>
+            ) : null}
+          </div>
+          <div className="sm:col-span-2">
+            <PrimaryButton type="submit" variant="action" disabled={saving}>
+              {saving ? "Đang lưu…" : t("common.save")}
+            </PrimaryButton>
+          </div>
+        </form>
       </UiCard>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        {[
-          ["24h", "Tổng giờ học"],
-          ["85%", "Tiến độ khóa học"],
-          ["15", "Bài thi đã làm"],
-        ].map(([v, l]) => (
-          <UiCard key={l} variant="panel" className="text-center">
-            <p className="text-2xl font-bold text-white">{v}</p>
-            <p className="text-xs text-drive-muted">{l}</p>
-          </UiCard>
-        ))}
-      </div>
+      <UiCard variant="panel" className="border-drive-action/30">
+        <h3 className="font-semibold text-white">{t("pages.profile.examDossierTitle")}</h3>
+        <p className="mt-2 text-sm text-drive-muted">{t("pages.profile.examDossierDesc")}</p>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          {appStatus ? (
+            <StatusBadge tone={examEligible ? "success" : appStatus === "draft" ? "warning" : "info"}>
+              {APP_STATUS_LABEL[appStatus] ?? appStatus}
+            </StatusBadge>
+          ) : (
+            <StatusBadge tone="neutral">Chưa tạo hồ sơ</StatusBadge>
+          )}
+          <Link to="/application">
+            <PrimaryButton variant="action">
+              {examEligible ? "Xem hồ sơ đã nộp" : "Nộp hồ sơ sát hạch"}
+            </PrimaryButton>
+          </Link>
+        </div>
+        {!examEligible ? (
+          <p className="mt-3 text-xs text-amber-300/90">{t("pages.profile.examDossierRequired")}</p>
+        ) : null}
+      </UiCard>
     </section>
   )
 }

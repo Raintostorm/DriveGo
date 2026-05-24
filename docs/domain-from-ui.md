@@ -40,6 +40,11 @@ Tai lieu nay duoc rut ra tu cac man hinh React hien tai. **Chua co API/DB trong 
 - **SubscriptionPlan**: code (`free` | `premium`), priceMonthly, features[]
 - **Payment**: userId, planId, amount, method, status, customerInfo
 
+### Ho so sat hanh (applications)
+- **LicenseApplication**: userId, licenseClass, centerId?, status (`draft` | `submitted` | `reviewing` | `approved` | `rejected`), personalInfo (JSON), submittedAt
+- **ApplicationDocument**: applicationId, docType, slotIndex, filePath, originalName, mimeType
+- Doc types bat buoc: `photo_3x4_blue` x4 slot, `photo_4x6_white`, `cccd_front`, `cccd_back`, `vneid_l2`; tuy chon: `gplx_optional`
+
 ## API sketch (REST)
 
 ### Auth
@@ -71,6 +76,11 @@ Tai lieu nay duoc rut ra tu cac man hinh React hien tai. **Chua co API/DB trong 
 - `GET /api/articles?search=` — Docs
 - `GET /api/plans` — Pricing
 - `POST /api/payments/checkout` — Upgrade page
+- `GET /api/applications/me` — ho so nop sat hanh (draft/submitted)
+- `POST /api/applications` — tao draft
+- `PATCH /api/applications/:id` — personalInfo, licenseClass
+- `POST /api/applications/:id/documents` — multipart upload (local `backend/uploads/`)
+- `POST /api/applications/:id/submit` — validate du giay to → submitted
 
 ## DB tables (sketch quan he)
 
@@ -86,6 +96,8 @@ exam_registrations (id, user_id, slot_id, status, ...)
 notifications (id, user_id, type, title, body, read_at, ...)
 subscription_plans (id, code, price_monthly, ...)
 payments (id, user_id, plan_id, amount, status, ...)
+license_applications (id, user_id, license_class, status, personal_info, submitted_at, ...)
+application_documents (id, application_id, doc_type, slot_index, file_path, ...)
 document_articles (id, slug, title, body, ...)
 chat_sessions (id, user_id, title, ...)
 chat_messages (id, session_id, role, content, ...)
@@ -101,6 +113,8 @@ chat_messages (id, session_id, role, content, ...)
 | `/history` | Bang ket qua | GET attempts |
 | `/schedule` | Chon ngay + Dang ky | GET schedules + POST registration |
 | `/upgrade` | Chon goi + thanh toan | GET plans + POST payment |
+| `/application` | Form + upload giay to | applications API |
+| `/profile` | Sua ho so + lich su thi | PATCH /users/me, GET attempts/history |
 | `/ai-chat` | Gui tin nhan | POST chat message (stream) |
 | `/lookup` | Tra cuu CCCD | GET lookup |
 | `/admin-dashboard` | Chart/KPI | GET admin dashboard |

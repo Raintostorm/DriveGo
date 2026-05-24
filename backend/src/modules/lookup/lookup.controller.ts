@@ -1,10 +1,12 @@
 import { Controller, Get, Query } from "@nestjs/common"
-import { dbNotConfigured } from "../../common/db-not-configured"
+import { LookupService } from "./lookup.service"
 
 @Controller("lookup")
 export class LookupController {
+  constructor(private readonly lookupService: LookupService) {}
+
   @Get()
-  lookup(@Query("code") _code?: string) {
-    dbNotConfigured("lookup.search")
+  lookup(@Query("code") code?: string) {
+    return this.lookupService.search(code ?? "")
   }
 }

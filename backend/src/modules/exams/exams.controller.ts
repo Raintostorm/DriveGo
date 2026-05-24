@@ -1,20 +1,38 @@
-import { Controller, Get, Param, Post } from "@nestjs/common"
-import { dbNotConfigured } from "../../common/db-not-configured"
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common"
+import { CurrentUser } from "../../common/current-user.decorator"
+import { AuthUser } from "../auth/jwt.strategy"
+import { JwtAuthGuard } from "../auth/jwt-auth.guard"
+import { SubmitAttemptDto } from "./dto/submit-attempt.dto"
+import { ExamsService } from "./exams.service"
 
 @Controller("exams")
 export class ExamsController {
+  constructor(private readonly examsService: ExamsService) {}
+
+  @Get("papers")
+  listPapers(@Query("licenseClass") licenseClass?: string) {
+    return this.examsService.listPapers(licenseClass)
+  }
+
   @Get("attempts/history")
-  history() {
-    dbNotConfigured("exams.history")
+  @UseGuards(JwtAuthGuard)
+  history(@CurrentUser() user: AuthUser) {
+    return this.examsService.getHistory(user.userId)
   }
 
   @Get(":paperId")
-  getPaper(@Param("paperId") _paperId: string) {
-    dbNotConfigured("exams.getPaper")
+  @UseGuards(JwtAuthGuard)
+  getPaper(@CurrentUser() user: AuthUser, @Param("paperId") paperId: string) {
+    return this.examsService.getPaper(paperId, user.userId)
   }
 
   @Post(":paperId/attempts")
-  submitAttempt(@Param("paperId") _paperId: string) {
-    dbNotConfigured("exams.submitAttempt")
+  @UseGuards(JwtAuthGuard)
+  submitAttempt(
+    @CurrentUser() user: AuthUser,
+    @Param("paperId") paperId: string,
+    @Body() body: SubmitAttemptDto,
+  ) {
+    return this.examsService.submitAttempt(user.userId, paperId, body)
   }
 }

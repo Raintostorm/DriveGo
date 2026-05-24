@@ -1,24 +1,79 @@
-import { Link } from "react-router-dom"
+import { useState } from "react"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import { PrimaryButton } from "../components/PrimaryButton.jsx"
 import { SocialAuthButtons } from "../components/SocialAuthButtons.jsx"
 import { TextField } from "../components/TextField.jsx"
 import { UiCard } from "../components/UiCard.jsx"
+import { dashboardPathForRole, useAuth } from "../context/AuthContext.jsx"
 import { t } from "../lib/strings.js"
 
 export function LoginPage() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { login, loginWithGoogle } = useAuth()
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState(null)
+
+  function redirectAfterAuth(user) {
+    const from = location.state?.from
+    const target =
+      from && from !== "/login" && from !== "/register"
+        ? from
+        : dashboardPathForRole(user.role)
+    navigate(target, { replace: true })
+  }
+
+  async function handleGoogleSuccess(idToken) {
+    setError(null)
+    setSubmitting(true)
+    try {
+      const user = await loginWithGoogle(idToken)
+      redirectAfterAuth(user)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Đăng nhập Google thất bại")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setError(null)
+    setSubmitting(true)
+    try {
+      const user = await login(email.trim(), password)
+      redirectAfterAuth(user)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Đăng nhập thất bại")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <UiCard padding="lg" className="w-full max-w-[440px]">
       <div className="mb-8 text-center">
         <h1 className="text-3xl font-bold tracking-tight text-white">{t("pages.login.title")}</h1>
         <p className="mt-2 text-sm text-drive-muted">{t("pages.login.subtitle")}</p>
       </div>
-      <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
+      <form className="space-y-5" onSubmit={handleSubmit}>
+        {error ? (
+          <p className="rounded-drive border border-drive-danger/40 bg-drive-danger/10 px-4 py-3 text-sm text-drive-danger">
+            {error}
+          </p>
+        ) : null}
         <TextField
           id="loginEmail"
           label={t("pages.login.email")}
           type="email"
           placeholder={t("pages.login.emailPlaceholder")}
           icon="✉"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          autoComplete="email"
         />
         <TextField
           id="loginPassword"
@@ -26,6 +81,10 @@ export function LoginPage() {
           type="password"
           placeholder={t("pages.login.passwordPlaceholder")}
           icon="🔒"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          autoComplete="current-password"
         />
         <div className="flex items-center justify-between text-sm">
           <label className="flex items-center gap-3 text-drive-label">
@@ -39,10 +98,10 @@ export function LoginPage() {
             {t("pages.login.forgot")}
           </Link>
         </div>
-        <PrimaryButton type="submit" fullWidth>
-          {t("pages.login.submit")}
+        <PrimaryButton type="submit" fullWidth disabled={submitting}>
+          {submitting ? "Đang đăng nhập…" : t("pages.login.submit")}
         </PrimaryButton>
-        <SocialAuthButtons />
+        <SocialAuthButtons onGoogleSuccess={handleGoogleSuccess} disabled={submitting} />
       </form>
     </UiCard>
   )

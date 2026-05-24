@@ -1,7 +1,10 @@
-import { Link } from "react-router-dom"
+import { useMemo } from "react"
+import { Link, useNavigate } from "react-router-dom"
 import { BrandLogo } from "../BrandLogo.jsx"
 import { PrimaryButton } from "../PrimaryButton.jsx"
 import { SidebarNav } from "../SidebarNav.jsx"
+import { useAuth } from "../../context/AuthContext.jsx"
+import { formatPremiumDate, isPremiumActive } from "../../lib/premium.js"
 import { t } from "../../lib/strings.js"
 
 const studentNav = [
@@ -12,6 +15,7 @@ const studentNav = [
   { to: "/schedule", labelKey: "nav.schedule" },
   { to: "/study-calendar", labelKey: "nav.studyCalendar" },
   { to: "/profile", labelKey: "nav.profile" },
+  { to: "/application", labelKey: "nav.application" },
   { to: "/notifications", labelKey: "nav.notifications" },
   { to: "/upgrade", labelKey: "nav.upgrade" },
   { to: "/ai-chat", labelKey: "nav.aiChat" },
@@ -26,7 +30,22 @@ const adminNav = [
  * @param {{ children: import('react').ReactNode, variant?: 'student' | 'admin' }} props
  */
 export function DashboardLayout({ children, variant = "student" }) {
-  const items = variant === "admin" ? adminNav : studentNav
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+  const premium = isPremiumActive(user)
+
+  const items = useMemo(() => {
+    const base = variant === "admin" ? adminNav : studentNav
+    if (!premium) return base
+    return base.map((item) =>
+      item.to === "/upgrade" ? { ...item, labelKey: "nav.premiumPlan" } : item,
+    )
+  }, [variant, premium])
+
+  function handleLogout() {
+    logout()
+    navigate("/login", { replace: true })
+  }
 
   return (
     <div className="-mx-4 flex min-h-[calc(100vh-3rem)] flex-col sm:-mx-6 lg:-mx-10 lg:flex-row">
@@ -38,12 +57,37 @@ export function DashboardLayout({ children, variant = "student" }) {
           <BrandLogo size="sm" />
         </Link>
         <SidebarNav items={items} />
-        <div className="mt-6 px-3">
-          <Link to="/upgrade">
-            <PrimaryButton variant="action" fullWidth>
-              {t("nav.upgrade")} Premium
-            </PrimaryButton>
-          </Link>
+        <div className="mt-6 space-y-2 px-3">
+          {premium ? (
+            <Link
+              to="/upgrade"
+              className="block rounded-drive border border-drive-success/40 bg-drive-success/10 px-3 py-2.5 text-center transition hover:bg-drive-success/15"
+            >
+              <span className="text-sm font-semibold text-drive-success">★ Premium</span>
+              <span className="mt-0.5 block text-xs text-drive-muted">
+                {t("pages.upgrade.validUntil")}{" "}
+                {formatPremiumDate(user?.profile?.premiumUntil)}
+              </span>
+            </Link>
+          ) : (
+            <Link to="/upgrade">
+              <PrimaryButton variant="action" fullWidth>
+                {t("nav.upgrade")} Premium
+              </PrimaryButton>
+            </Link>
+          )}
+          {user ? (
+            <p className="truncate px-1 text-xs text-drive-muted" title={user.email}>
+              {user.profile?.fullName || user.email}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full rounded-drive-pill border border-drive-border py-2.5 text-sm text-drive-muted transition hover:text-white"
+          >
+            Đăng xuất
+          </button>
         </div>
       </div>
       <div className="min-w-0 flex-1 lg:pl-72">

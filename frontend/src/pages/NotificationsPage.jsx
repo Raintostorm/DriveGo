@@ -1,57 +1,100 @@
+import { useEffect, useState } from "react"
+import { Link } from "react-router-dom"
 import { PageHeader } from "../components/PageHeader.jsx"
 import { PrimaryButton } from "../components/PrimaryButton.jsx"
 import { UiCard } from "../components/UiCard.jsx"
+import { apiFetch } from "../lib/api.js"
 import { t } from "../lib/strings.js"
 
-const notifications = [
-  {
-    title: "Thông báo lịch thi",
-    desc: "Lịch thi sát hạch của bạn đã được xác nhận vào 25/10/2023 tại Trung tâm Sát hạch Củ Chi. Vui lòng có mặt lúc 07:30 sáng.",
-    action: "Chi tiết",
-  },
-  {
-    title: "Nhắc nhở bài học",
-    desc: "Bạn quên hoàn thành bài tập Lý thuyết Chương 2.",
-    action: "Học ngay",
-  },
-  {
-    title: "Kết quả thi thử",
-    desc: "Chúc mừng! Bạn đạt 35/35 điểm.",
-    action: "Xem bảng điểm",
-  },
-]
-
 export function NotificationsPage() {
+  const [filter, setFilter] = useState("all")
+  const [items, setItems] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      try {
+        const q = filter === "unread" ? "?filter=unread" : ""
+        const data = await apiFetch(`/notifications${q}`, { auth: true })
+        if (!cancelled) setItems(data)
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [filter])
+
+  async function markRead(id) {
+    await apiFetch(`/notifications/${id}/read`, { method: "PATCH", auth: true })
+    setItems((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)))
+  }
+
+  const tabs = [
+    { key: "all", label: t("pages.notifications.all") },
+    { key: "unread", label: t("pages.notifications.unread") },
+    { key: "important", label: t("pages.notifications.important") },
+  ]
+
+  const visible =
+    filter === "important"
+      ? items.filter((n) => n.type === "exam" || n.type === "schedule")
+      : items
+
   return (
     <section className="space-y-6">
       <PageHeader title={t("pages.notifications.title")} subtitle={t("pages.notifications.subtitle")} />
 
       <div className="flex flex-wrap gap-2">
-        {[t("pages.notifications.all"), t("pages.notifications.unread"), t("pages.notifications.important")].map(
-          (tab, i) => (
-            <button
-              key={tab}
-              type="button"
-              className={`rounded-drive-pill px-4 py-1.5 text-sm font-medium transition ${
-                i === 0
-                  ? "bg-drive-accent text-white"
-                  : "border border-drive-border bg-drive-elevated text-drive-muted hover:text-white"
-              }`}
-            >
-              {tab}
-            </button>
-          ),
-        )}
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            type="button"
+            onClick={() => setFilter(tab.key)}
+            className={`rounded-drive-pill px-4 py-1.5 text-sm font-medium transition ${
+              filter === tab.key
+                ? "bg-drive-accent text-white"
+                : "border border-drive-border bg-drive-elevated text-drive-muted hover:text-white"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
+      {loading ? <p className="text-drive-muted">Đang tải…</p> : null}
+
       <div className="space-y-3">
-        {notifications.map((n) => (
-          <UiCard key={n.title} variant="panel">
+        {visible.map((n) => (
+          <UiCard
+            key={n.id}
+            variant="panel"
+            className={n.read ? "opacity-80" : "border-drive-accent/30"}
+          >
             <p className="font-semibold text-white">{n.title}</p>
-            <p className="mt-1 text-sm leading-relaxed text-drive-muted">{n.desc}</p>
-            <PrimaryButton variant="action" className="mt-3 !py-1.5 !text-xs">
-              {n.action}
-            </PrimaryButton>
+            <p className="mt-1 text-sm leading-relaxed text-drive-muted">{n.body}</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {n.actionUrl ? (
+                <Link to={n.actionUrl}>
+                  <PrimaryButton variant="action" className="!py-1.5 !text-xs">
+                    Xem chi tiết
+                  </PrimaryButton>
+                </Link>
+              ) : null}
+              {!n.read ? (
+                <PrimaryButton
+                  variant="outline"
+                  className="!py-1.5 !text-xs"
+                  onClick={() => markRead(n.id)}
+                >
+                  Đánh dấu đã đọc
+                </PrimaryButton>
+              ) : null}
+            </div>
           </UiCard>
         ))}
       </div>

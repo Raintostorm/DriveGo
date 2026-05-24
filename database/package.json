@@ -3,9 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test:connection": "node scripts/test-connection.mjs"
+    "test:connection": "node scripts/test-connection.mjs",
+    "seed": "node scripts/seed.mjs"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.2",
     "pg": "^8.14.1"
   }
 }
