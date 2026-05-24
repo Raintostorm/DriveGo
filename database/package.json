@@ -1,0 +1,11 @@
+{
+  "name": "drivego-database",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:connection": "node scripts/test-connection.mjs"
+  },
+  "dependencies": {
+    "pg": "^8.14.1"
+  }
+}
