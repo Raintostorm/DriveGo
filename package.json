@@ -1,30 +1,18 @@
 {
-  "name": "exe",
+  "name": "drivego",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "@tailwindcss/vite": "^4.3.0",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6",
-    "react-router-dom": "^7.15.0",
-    "tailwindcss": "^4.3.0"
+    "dev": "concurrently \"npm run dev -w frontend\" \"npm run start:dev -w backend\"",
+    "dev:fe": "npm run dev -w frontend",
+    "dev:be": "npm run start:dev -w backend",
+    "build": "npm run build -w frontend && npm run build -w backend",
+    "lint": "npm run lint -w frontend && npm run lint -w backend"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
-    "eslint": "^10.3.0",
-    "eslint-plugin-react-hooks": "^7.1.1",
-    "eslint-plugin-react-refresh": "^0.5.2",
-    "globals": "^17.6.0",
-    "vite": "^8.0.12"
+    "concurrently": "^9.1.2"
   }
 }
