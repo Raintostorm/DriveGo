@@ -1,0 +1,32 @@
+/**
+ * @param {{ children: import('react').ReactNode, className?: string, variant?: 'primary' | 'action' | 'outline' | 'ghost', type?: 'button' | 'submit', onClick?: () => void, fullWidth?: boolean }} props
+ */
+export function PrimaryButton({
+  children,
+  className = "",
+  variant = "primary",
+  type = "button",
+  onClick,
+  fullWidth,
+}) {
+  const base =
+    "rounded-drive-pill px-6 py-3 text-sm font-bold transition focus:outline-none focus:ring-2 focus:ring-drive-accent focus:ring-offset-2 focus:ring-offset-drive-canvas disabled:opacity-60"
+  const variants = {
+    primary:
+      "bg-drive-accent text-white uppercase tracking-wide shadow-drive-glow hover:brightness-110",
+    action:
+      "bg-drive-action text-white shadow-drive-action hover:brightness-110",
+    outline:
+      "border border-drive-border bg-drive-elevated text-white hover:bg-drive-panel",
+    ghost: "text-drive-muted hover:bg-drive-elevated hover:text-white",
+  }
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      className={`${base} ${variants[variant]} ${fullWidth ? "w-full" : ""} ${className}`.trim()}
+    >
+      {children}
+    </button>
+  )
+}

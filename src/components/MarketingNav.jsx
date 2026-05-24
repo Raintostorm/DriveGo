@@ -1,0 +1,78 @@
+import { useEffect, useRef, useState } from "react"
+import { Link, NavLink } from "react-router-dom"
+import { t } from "../lib/strings.js"
+import { marketingRoutes, moreRoutes } from "../routes.jsx"
+import { BrandLogo } from "./BrandLogo.jsx"
+import { PrimaryButton } from "./PrimaryButton.jsx"
+
+const navLinkClass = ({ isActive }) =>
+  `text-sm font-medium transition ${isActive ? "text-white" : "text-drive-muted hover:text-white"}`
+
+export function MarketingNav() {
+  const [moreOpen, setMoreOpen] = useState(false)
+  const wrapRef = useRef(null)
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setMoreOpen(false)
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
+
+  return (
+    <header className="sticky top-0 z-30 -mx-4 mb-8 border-b border-drive-border-soft bg-drive-canvas/90 px-4 py-4 backdrop-blur-md sm:-mx-6 sm:px-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <BrandLogo />
+
+        <nav className="hidden items-center gap-8 md:flex" aria-label="Chính">
+          {marketingRoutes.map(({ path, labelKey }) => (
+            <NavLink
+              key={path}
+              to={path}
+              className={navLinkClass}
+              end={path === "/home"}
+              onClick={() => setMoreOpen(false)}
+            >
+              {t(labelKey)}
+            </NavLink>
+          ))}
+          <div className="relative" ref={wrapRef}>
+            <button
+              type="button"
+              onClick={() => setMoreOpen((o) => !o)}
+              className="text-sm font-medium text-drive-muted hover:text-white"
+            >
+              {t("nav.more")}
+            </button>
+            {moreOpen ? (
+              <div className="absolute right-0 z-50 mt-2 min-w-[200px] rounded-drive border border-drive-border bg-drive-panel py-2 shadow-xl">
+                <p className="px-3 py-1 text-[10px] font-semibold uppercase text-drive-placeholder">
+                  {t("nav.moreGroupApp")}
+                </p>
+                {moreRoutes.map(({ path, labelKey }) => (
+                  <NavLink
+                    key={path}
+                    to={path}
+                    className="block px-3 py-2 text-sm text-drive-text hover:bg-drive-elevated"
+                    onClick={() => setMoreOpen(false)}
+                  >
+                    {t(labelKey)}
+                  </NavLink>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </nav>
+
+        <div className="flex items-center gap-3">
+          <Link to="/login" className="hidden text-sm font-medium text-drive-muted hover:text-white sm:inline">
+            {t("nav.login")}
+          </Link>
+          <Link to="/register">
+            <PrimaryButton variant="action">{t("nav.register")}</PrimaryButton>
+          </Link>
+        </div>
+      </div>
+    </header>
+  )
+}

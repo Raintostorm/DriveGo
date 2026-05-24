@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-drive-canvas: #0b0f1a;
+  --color-drive-surface: rgb(21 26 45 / 0.95);
+  --color-drive-panel: #151b2b;
+  --color-drive-sidebar: #111623;
+  --color-drive-elevated: #1e243a;
+  --color-drive-border: #2a324e;
+  --color-drive-border-soft: #1e293b;
+  --color-drive-accent: #3c3cf6;
+  --color-drive-action: #0d7ff2;
+  --color-drive-success: #0bda5b;
+  --color-drive-danger: #ef4444;
+  --color-drive-text: #e2e8f0;
+  --color-drive-muted: #94a3b8;
+  --color-drive-placeholder: #64748b;
+  --color-drive-label: #cbd5e1;
+  --radius-drive: 1rem;
+  --radius-drive-lg: 1.5rem;
+  --radius-drive-pill: 1.5rem;
+  --shadow-drive-card: 0 25px 50px -12px rgb(0 0 0 / 0.5);
+  --shadow-drive-glow: 0 0 10px rgb(60 60 246 / 0.4);
+  --shadow-drive-action: 0 0 7.5px rgb(13 127 242 / 0.5);
+}
+
+:root {
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--color-drive-text);
+  background-color: var(--color-drive-canvas);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 15% 0%, rgb(60 60 246 / 0.1), transparent 40%),
+    radial-gradient(circle at 85% 100%, rgb(59 130 246 / 0.1), transparent 40%),
+    var(--color-drive-canvas);
+}

@@ -1,0 +1,172 @@
+import { lazy } from "react"
+
+function lazyNamed(importer, exportName) {
+  return lazy(() =>
+    importer().then((m) => ({
+      default: m[exportName],
+    })),
+  )
+}
+
+/**
+ * @typedef {'marketing' | 'auth' | 'dashboard' | 'admin'} RouteLayoutType
+ * @typedef {{ path: string, labelKey: string, group: 'marketing' | 'auth' | 'app' | 'admin', layout: RouteLayoutType, LazyPage: import('react').LazyExoticComponent<import('react').ComponentType<object>> }} AppRoute
+ */
+
+/** @type {AppRoute[]} */
+export const routeConfig = [
+  {
+    path: "/home",
+    labelKey: "nav.home",
+    group: "marketing",
+    layout: "marketing",
+    LazyPage: lazyNamed(() => import("./pages/HomePage.jsx"), "HomePage"),
+  },
+  {
+    path: "/pricing",
+    labelKey: "nav.pricing",
+    group: "marketing",
+    layout: "marketing",
+    LazyPage: lazyNamed(() => import("./pages/PricingPage.jsx"), "PricingPage"),
+  },
+  {
+    path: "/docs",
+    labelKey: "nav.docs",
+    group: "marketing",
+    layout: "marketing",
+    LazyPage: lazyNamed(() => import("./pages/DocsPage.jsx"), "DocsPage"),
+  },
+  {
+    path: "/lookup",
+    labelKey: "nav.lookup",
+    group: "marketing",
+    layout: "marketing",
+    LazyPage: lazyNamed(() => import("./pages/LookupPage.jsx"), "LookupPage"),
+  },
+  {
+    path: "/login",
+    labelKey: "nav.login",
+    group: "auth",
+    layout: "auth",
+    LazyPage: lazyNamed(() => import("./pages/LoginPage.jsx"), "LoginPage"),
+  },
+  {
+    path: "/register",
+    labelKey: "nav.register",
+    group: "auth",
+    layout: "auth",
+    LazyPage: lazyNamed(() => import("./pages/RegisterPage.jsx"), "RegisterPage"),
+  },
+  {
+    path: "/forgot-password",
+    labelKey: "nav.forgotPassword",
+    group: "auth",
+    layout: "auth",
+    LazyPage: lazyNamed(
+      () => import("./pages/ForgotPasswordPage.jsx"),
+      "ForgotPasswordPage",
+    ),
+  },
+  {
+    path: "/history",
+    labelKey: "nav.history",
+    group: "app",
+    layout: "dashboard",
+    LazyPage: lazyNamed(() => import("./pages/HistoryPage.jsx"), "HistoryPage"),
+  },
+  {
+    path: "/exam",
+    labelKey: "nav.exam",
+    group: "app",
+    layout: "dashboard",
+    LazyPage: lazyNamed(() => import("./pages/ExamPage.jsx"), "ExamPage"),
+  },
+  {
+    path: "/theory",
+    labelKey: "nav.theory",
+    group: "app",
+    layout: "dashboard",
+    LazyPage: lazyNamed(() => import("./pages/TheoryPage.jsx"), "TheoryPage"),
+  },
+  {
+    path: "/schedule",
+    labelKey: "nav.schedule",
+    group: "app",
+    layout: "dashboard",
+    LazyPage: lazyNamed(() => import("./pages/SchedulePage.jsx"), "SchedulePage"),
+  },
+  {
+    path: "/student-dashboard",
+    labelKey: "nav.studentDashboard",
+    group: "app",
+    layout: "dashboard",
+    LazyPage: lazyNamed(
+      () => import("./pages/StudentDashboardPage.jsx"),
+      "StudentDashboardPage",
+    ),
+  },
+  {
+    path: "/upgrade",
+    labelKey: "nav.upgrade",
+    group: "app",
+    layout: "dashboard",
+    LazyPage: lazyNamed(() => import("./pages/UpgradePage.jsx"), "UpgradePage"),
+  },
+  {
+    path: "/profile",
+    labelKey: "nav.profile",
+    group: "app",
+    layout: "dashboard",
+    LazyPage: lazyNamed(() => import("./pages/ProfilePage.jsx"), "ProfilePage"),
+  },
+  {
+    path: "/study-calendar",
+    labelKey: "nav.studyCalendar",
+    group: "app",
+    layout: "dashboard",
+    LazyPage: lazyNamed(
+      () => import("./pages/StudyCalendarPage.jsx"),
+      "StudyCalendarPage",
+    ),
+  },
+  {
+    path: "/ai-chat",
+    labelKey: "nav.aiChat",
+    group: "app",
+    layout: "dashboard",
+    LazyPage: lazyNamed(() => import("./pages/AiChatPage.jsx"), "AiChatPage"),
+  },
+  {
+    path: "/notifications",
+    labelKey: "nav.notifications",
+    group: "app",
+    layout: "dashboard",
+    LazyPage: lazyNamed(
+      () => import("./pages/NotificationsPage.jsx"),
+      "NotificationsPage",
+    ),
+  },
+  {
+    path: "/center-register",
+    labelKey: "nav.centerRegister",
+    group: "app",
+    layout: "marketing",
+    LazyPage: lazyNamed(
+      () => import("./pages/CenterRegisterPage.jsx"),
+      "CenterRegisterPage",
+    ),
+  },
+  {
+    path: "/admin-dashboard",
+    labelKey: "nav.adminDashboard",
+    group: "admin",
+    layout: "admin",
+    LazyPage: lazyNamed(
+      () => import("./pages/AdminDashboardPage.jsx"),
+      "AdminDashboardPage",
+    ),
+  },
+]
+
+export const marketingRoutes = routeConfig.filter((r) => r.group === "marketing")
+export const moreRoutes = routeConfig.filter((r) => r.group === "app" || r.group === "admin")
