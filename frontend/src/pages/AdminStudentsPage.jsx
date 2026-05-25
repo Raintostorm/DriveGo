@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import { Link } from "react-router-dom"
 import { PageHeader } from "../components/PageHeader.jsx"
 import { StatusBadge } from "../components/StatusBadge.jsx"
 import { UiCard } from "../components/UiCard.jsx"
@@ -69,7 +70,8 @@ export function AdminStudentsPage() {
               <tr className="border-b border-drive-border text-drive-muted">
                 <th className="py-2 pr-4">Học viên</th>
                 <th className="py-2 pr-4">Premium</th>
-                <th className="py-2">Khóa đã đăng ký</th>
+                <th className="py-2 pr-4">Khóa đã đăng ký</th>
+                <th className="py-2" />
               </tr>
             </thead>
             <tbody>
@@ -88,7 +90,7 @@ export function AdminStudentsPage() {
                       <span className="text-drive-muted">—</span>
                     )}
                   </td>
-                  <td className="py-3">
+                  <td className="py-3 pr-4">
                     {r.enrollments?.length ? (
                       <ul className="space-y-1">
                         {r.enrollments.map((e) => (
@@ -105,6 +107,14 @@ export function AdminStudentsPage() {
                     ) : (
                       <span className="text-drive-muted">Chưa đăng ký khóa</span>
                     )}
+                  </td>
+                  <td className="py-3 text-right">
+                    <Link
+                      to={`/admin/students/${r.userId}`}
+                      className="text-drive-action hover:underline"
+                    >
+                      Chi tiết
+                    </Link>
                   </td>
                 </tr>
               ))}

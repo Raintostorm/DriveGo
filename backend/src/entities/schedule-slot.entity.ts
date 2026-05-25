@@ -54,6 +54,9 @@ export class ScheduleSlot {
 
   @Column({ name: "registered_count", type: "int", default: 0 })
   registeredCount!: number
+
+  @Column({ name: "created_by", type: "uuid", nullable: true })
+  createdBy?: string | null
 }
 
 @Entity("exam_registrations")

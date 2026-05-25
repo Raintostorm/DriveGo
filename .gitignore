@@ -22,6 +22,10 @@ dist-ssr
 firebase.txt
 backend/secrets/
 
+# Local PDF sources (not part of repo)
+*.pdf
+database/scripts/_probe_*.py
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

@@ -194,6 +194,16 @@ export const routeConfig = [
     ),
   },
   {
+    path: "/admin/students/:userId",
+    labelKey: "nav.adminStudentDetail",
+    group: "admin",
+    layout: "admin",
+    LazyPage: lazyNamed(
+      () => import("./pages/AdminStudentDetailPage.jsx"),
+      "AdminStudentDetailPage",
+    ),
+  },
+  {
     path: "/admin/applications",
     labelKey: "nav.adminApplications",
     group: "admin",
@@ -221,6 +231,56 @@ export const routeConfig = [
     LazyPage: lazyNamed(
       () => import("./pages/AdminSchedulesPage.jsx"),
       "AdminSchedulesPage",
+    ),
+  },
+  {
+    path: "/admin/schedules/slots",
+    labelKey: "nav.adminSlots",
+    group: "admin",
+    layout: "admin",
+    LazyPage: lazyNamed(
+      () => import("./pages/AdminScheduleSlotsPage.jsx"),
+      "AdminScheduleSlotsPage",
+    ),
+  },
+  {
+    path: "/admin/courses",
+    labelKey: "nav.adminCourses",
+    group: "admin",
+    layout: "admin",
+    LazyPage: lazyNamed(
+      () => import("./pages/AdminCoursesPage.jsx"),
+      "AdminCoursesPage",
+    ),
+  },
+  {
+    path: "/admin/courses/:code/chapters",
+    labelKey: "nav.adminChapters",
+    group: "admin",
+    layout: "admin",
+    LazyPage: lazyNamed(
+      () => import("./pages/AdminCourseChaptersPage.jsx"),
+      "AdminCourseChaptersPage",
+    ),
+  },
+  {
+    path: "/admin/class-sessions",
+    labelKey: "nav.adminClassSessions",
+    group: "admin",
+    layout: "admin",
+    LazyPage: lazyNamed(
+      () => import("./pages/AdminClassSessionsPage.jsx"),
+      "AdminClassSessionsPage",
+    ),
+  },
+  {
+    path: "/admin/centers",
+    labelKey: "nav.adminCenters",
+    group: "admin",
+    layout: "admin",
+    LazyPage: lazyNamed(
+      () => import("./pages/AdminCentersPage.jsx"),
+      "AdminCentersPage",
     ),
   },
 ]

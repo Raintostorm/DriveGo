@@ -1,9 +1,13 @@
-import { Injectable } from "@nestjs/common"
+import { Injectable, NotFoundException } from "@nestjs/common"
 import { InjectRepository } from "@nestjs/typeorm"
 import { Repository } from "typeorm"
 import { CourseEnrollment } from "../../entities/course-enrollment.entity"
+import { ExamAttempt } from "../../entities/exam-attempt.entity"
+import { LicenseApplication } from "../../entities/license-application.entity"
 import { StudentProfile } from "../../entities/student-profile.entity"
 import { User } from "../../entities/user.entity"
+import { AuthUser } from "../auth/jwt.strategy"
+import { AdminScopeService } from "./admin-scope.service"
 
 @Injectable()
 export class AdminStudentsService {
@@ -14,18 +18,32 @@ export class AdminStudentsService {
     private readonly profilesRepo: Repository<StudentProfile>,
     @InjectRepository(CourseEnrollment)
     private readonly enrollmentsRepo: Repository<CourseEnrollment>,
+    @InjectRepository(ExamAttempt)
+    private readonly attemptsRepo: Repository<ExamAttempt>,
+    @InjectRepository(LicenseApplication)
+    private readonly appsRepo: Repository<LicenseApplication>,
+    private readonly scope: AdminScopeService,
   ) {}
 
-  async list(filters: {
-    premium?: string
-    enrolled?: string
-    licenseClass?: string
-  }) {
+  private async centerFilter(admin: AuthUser) {
+    const centerId = await this.scope.getCenterIdForAdmin(admin)
+    return centerId
+  }
+
+  async list(
+    admin: AuthUser,
+    filters: { premium?: string; enrolled?: string; licenseClass?: string },
+  ) {
+    const centerId = await this.centerFilter(admin)
     const qb = this.usersRepo
       .createQueryBuilder("u")
       .innerJoin(StudentProfile, "p", "p.user_id = u.id")
       .where("u.role = :role", { role: "student" })
       .orderBy("u.email", "ASC")
+
+    if (centerId) {
+      qb.andWhere("p.center_id = :centerId", { centerId })
+    }
 
     if (filters.premium === "true") {
       qb.andWhere("p.premium_until > NOW()")
@@ -95,5 +113,69 @@ export class AdminStudentsService {
     }
 
     return rows
+  }
+
+  async getOne(admin: AuthUser, userId: string) {
+    const centerId = await this.centerFilter(admin)
+    const profile = await this.profilesRepo.findOne({ where: { userId } })
+    if (!profile) throw new NotFoundException("Không tìm thấy học viên")
+    if (centerId && profile.centerId !== centerId) {
+      throw new NotFoundException("Không tìm thấy học viên")
+    }
+
+    const user = await this.usersRepo.findOne({ where: { id: userId } })
+    if (!user || user.role !== "student") {
+      throw new NotFoundException("Không tìm thấy học viên")
+    }
+
+    const enrollments = await this.enrollmentsRepo.find({
+      where: { userId },
+      order: { enrolledAt: "DESC" },
+    })
+
+    const attempts = await this.attemptsRepo.find({
+      where: { userId },
+      order: { startedAt: "DESC" },
+      take: 10,
+    })
+
+    const application = await this.appsRepo.findOne({
+      where: { userId },
+      order: { createdAt: "DESC" },
+    })
+
+    return {
+      userId: user.id,
+      email: user.email,
+      fullName: profile.fullName,
+      phone: profile.phone,
+      licenseClass: profile.licenseClass,
+      premiumUntil: profile.premiumUntil,
+      adminNote: profile.adminNote,
+      centerId: profile.centerId,
+      enrollments,
+      recentAttempts: attempts.map((a) => ({
+        id: a.id,
+        score: a.score,
+        passed: a.passed,
+        finishedAt: a.finishedAt,
+        paperId: a.paperId,
+      })),
+      application: application
+        ? {
+            id: application.id,
+            status: application.status,
+            licenseClass: application.licenseClass,
+            submittedAt: application.submittedAt,
+            dossierRequestedAt: application.dossierRequestedAt,
+          }
+        : null,
+    }
+  }
+
+  async updateNote(admin: AuthUser, userId: string, adminNote: string) {
+    await this.getOne(admin, userId)
+    await this.profilesRepo.update({ userId }, { adminNote })
+    return this.getOne(admin, userId)
   }
 }

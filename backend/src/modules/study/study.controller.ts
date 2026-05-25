@@ -23,6 +23,12 @@ export class StudyController {
     return this.studyService.getChapter(user.userId, id)
   }
 
+  @Get("dashboard-summary")
+  @UseGuards(JwtAuthGuard)
+  dashboardSummary(@CurrentUser() user: AuthUser) {
+    return this.studyService.dashboardSummary(user.userId)
+  }
+
   @Patch("chapters/:id/progress")
   @UseGuards(JwtAuthGuard)
   updateProgress(

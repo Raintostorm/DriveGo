@@ -7,21 +7,31 @@ import { fetchAdminApplications } from "../lib/admin-api.js"
 
 const STATUS_OPTIONS = [
   { value: "", label: "Tất cả" },
+  { value: "draft", label: "Nháp (chưa nộp)" },
   { value: "submitted", label: "Đã nộp" },
   { value: "reviewing", label: "Đang xem" },
   { value: "approved", label: "Đã duyệt" },
   { value: "rejected", label: "Từ chối" },
 ]
 
+const STATUS_LABEL = {
+  draft: "Nháp",
+  submitted: "Đã nộp",
+  reviewing: "Đang duyệt",
+  approved: "Đã duyệt",
+  rejected: "Từ chối",
+}
+
 function statusTone(status) {
   if (status === "approved") return "success"
   if (status === "rejected") return "danger"
   if (status === "reviewing") return "warning"
+  if (status === "draft") return "warning"
   return "neutral"
 }
 
 export function AdminApplicationsPage() {
-  const [status, setStatus] = useState("submitted")
+  const [status, setStatus] = useState("")
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -36,7 +46,10 @@ export function AdminApplicationsPage() {
 
   return (
     <section className="space-y-6">
-      <PageHeader title="Hồ sơ học viên" subtitle="Nhận và tải hồ sơ đã nộp" />
+      <PageHeader
+        title="Hồ sơ học viên"
+        subtitle="Nháp đang soạn, hồ sơ đã nộp và yêu cầu nộp lại"
+      />
 
       <UiCard variant="panel">
         <label className="text-sm text-drive-muted">
@@ -75,6 +88,7 @@ export function AdminApplicationsPage() {
                   <th className="py-2 pr-4">Hạng</th>
                   <th className="py-2 pr-4">Trạng thái</th>
                   <th className="py-2 pr-4">Ngày nộp</th>
+                  <th className="py-2 pr-4">Hạn hồ sơ</th>
                   <th className="py-2" />
                 </tr>
               </thead>
@@ -87,12 +101,21 @@ export function AdminApplicationsPage() {
                     </td>
                     <td className="py-3 pr-4 text-white">{r.licenseClass}</td>
                     <td className="py-3 pr-4">
-                      <StatusBadge tone={statusTone(r.status)}>{r.status}</StatusBadge>
+                      <StatusBadge tone={statusTone(r.status)}>
+                        {STATUS_LABEL[r.status] ?? r.status}
+                      </StatusBadge>
                     </td>
                     <td className="py-3 pr-4 text-drive-muted">
                       {r.submittedAt
                         ? new Date(r.submittedAt).toLocaleString("vi-VN")
                         : "—"}
+                    </td>
+                    <td className="py-3 pr-4 text-drive-muted">
+                      {r.dossierDeadline
+                        ? new Date(r.dossierDeadline).toLocaleString("vi-VN")
+                        : r.dossierRequestedAt
+                          ? "Đã yêu cầu"
+                          : "—"}
                     </td>
                     <td className="py-3 text-right">
                       <Link

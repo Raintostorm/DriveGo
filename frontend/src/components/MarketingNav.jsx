@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Link, NavLink } from "react-router-dom"
+import { useAuth } from "../context/AuthContext.jsx"
+import { isStaffRole } from "../lib/roles.js"
 import { t } from "../lib/strings.js"
 import { marketingRoutes, moreRoutes } from "../routes.jsx"
 import { BrandLogo } from "./BrandLogo.jsx"
@@ -9,6 +11,8 @@ const navLinkClass = ({ isActive }) =>
   `text-sm font-medium transition ${isActive ? "text-white" : "text-drive-muted hover:text-white"}`
 
 export function MarketingNav() {
+  const { user } = useAuth()
+  const staff = user && isStaffRole(user.role)
   const [moreOpen, setMoreOpen] = useState(false)
   const wrapRef = useRef(null)
   useEffect(() => {
@@ -65,6 +69,14 @@ export function MarketingNav() {
         </nav>
 
         <div className="flex items-center gap-3">
+          {staff ? (
+            <Link
+              to="/admin-dashboard"
+              className="hidden text-sm font-medium text-drive-action hover:underline sm:inline"
+            >
+              Vào quản trị
+            </Link>
+          ) : null}
           <Link to="/login" className="hidden text-sm font-medium text-drive-muted hover:text-white sm:inline">
             {t("nav.login")}
           </Link>

@@ -4,7 +4,8 @@ import { PrimaryButton } from "../components/PrimaryButton.jsx"
 import { SocialAuthButtons } from "../components/SocialAuthButtons.jsx"
 import { TextField } from "../components/TextField.jsx"
 import { UiCard } from "../components/UiCard.jsx"
-import { dashboardPathForRole, useAuth } from "../context/AuthContext.jsx"
+import { useAuth } from "../context/AuthContext.jsx"
+import { dashboardPathForRole, isStaffRole, isStudentAppPath } from "../lib/roles.js"
 import { t } from "../lib/strings.js"
 
 export function LoginPage() {
@@ -18,10 +19,16 @@ export function LoginPage() {
 
   function redirectAfterAuth(user) {
     const from = location.state?.from
-    const target =
-      from && from !== "/login" && from !== "/register"
-        ? from
-        : dashboardPathForRole(user.role)
+    const staff = isStaffRole(user.role)
+    let target = dashboardPathForRole(user.role)
+    if (
+      from &&
+      from !== "/login" &&
+      from !== "/register" &&
+      !(staff && isStudentAppPath(from))
+    ) {
+      target = from
+    }
     navigate(target, { replace: true })
   }
 

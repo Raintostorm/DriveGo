@@ -1,0 +1,36 @@
+{
+  "chapters": [
+    {
+      "id": "44444444-4444-4444-8444-444444444401",
+      "title": "Chương 1: Biển báo hiệu đường bộ",
+      "sortOrder": 1,
+      "durationMinutes": 45,
+      "videoUrl": "https://www.youtube-nocookie.com/embed/8ndOIY5FNeo?rel=0&modestbranding=1",
+      "description": "Nhận biết biển báo cấm, nguy hiểm và hiệu lệnh (ô tô B2)."
+    },
+    {
+      "id": "44444444-4444-4444-8444-444444444402",
+      "title": "Chương 2: Quy tắc giao thông",
+      "sortOrder": 2,
+      "durationMinutes": 50,
+      "videoUrl": "https://www.youtube-nocookie.com/embed/jEqaK9lvlvA?rel=0&modestbranding=1",
+      "description": "Quy tắc ưu tiên, làn đường và khoảng cách an toàn."
+    },
+    {
+      "id": "44444444-4444-4444-8444-444444444403",
+      "title": "Chương 3: Kỹ thuật lái xe an toàn",
+      "sortOrder": 3,
+      "durationMinutes": 40,
+      "videoUrl": "https://www.youtube-nocookie.com/embed/MFx-VLUi4tw?rel=0&modestbranding=1",
+      "description": "Lái ban đêm, đường mưa và cao tốc."
+    },
+    {
+      "id": "44444444-4444-4444-8444-444444444404",
+      "title": "Chương 4: Giải đề thi thử",
+      "sortOrder": 4,
+      "durationMinutes": 35,
+      "videoUrl": "https://www.youtube-nocookie.com/embed/Uv_j-wkRFHE?rel=0&modestbranding=1",
+      "description": "Mẹo giải câu điểm liệt và tình huống mô phỏng."
+    }
+  ]
+}

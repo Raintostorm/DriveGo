@@ -1,7 +1,8 @@
 import { AuthGate } from "./AuthGate.jsx"
 import { AuthLayout } from "./layouts/AuthLayout.jsx"
-import { DashboardLayout } from "./layouts/DashboardLayout.jsx"
+import { AdminLayout } from "./layouts/AdminLayout.jsx"
 import { MarketingLayout } from "./layouts/MarketingLayout.jsx"
+import { StudentLayout } from "./layouts/StudentLayout.jsx"
 
 /**
  * @param {{ layout: 'marketing' | 'auth' | 'dashboard' | 'admin', children: import('react').ReactNode }} props
@@ -12,9 +13,9 @@ export function RouteLayout({ layout, children }) {
       {layout === "auth" ? (
         <AuthLayout>{children}</AuthLayout>
       ) : layout === "dashboard" ? (
-        <DashboardLayout variant="student">{children}</DashboardLayout>
+        <StudentLayout>{children}</StudentLayout>
       ) : layout === "admin" ? (
-        <DashboardLayout variant="admin">{children}</DashboardLayout>
+        <AdminLayout>{children}</AdminLayout>
       ) : (
         <MarketingLayout>{children}</MarketingLayout>
       )}

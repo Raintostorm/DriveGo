@@ -19,6 +19,7 @@ import { AdminScopeService } from "./admin-scope.service"
 import { PatchApplicationAdminDto } from "./dto/patch-application-admin.dto"
 
 const ADMIN_LIST_STATUSES: ApplicationStatus[] = [
+  "draft",
   "submitted",
   "reviewing",
   "approved",
@@ -51,7 +52,12 @@ export class AdminApplicationsService {
 
     if (status) qb.andWhere("a.status = :status", { status })
     if (licenseClass) qb.andWhere("a.license_class = :licenseClass", { licenseClass })
-    if (centerId) qb.andWhere("a.center_id = :centerId", { centerId })
+    if (centerId) {
+      qb.andWhere(
+        "(a.center_id = :centerId OR (a.center_id IS NULL AND p.center_id = :centerId))",
+        { centerId },
+      )
+    }
 
     const rows = await qb
       .select([
@@ -59,6 +65,8 @@ export class AdminApplicationsService {
         "a.license_class AS license_class",
         "a.status AS status",
         "a.submitted_at AS submitted_at",
+        "a.dossier_requested_at AS dossier_requested_at",
+        "a.dossier_deadline AS dossier_deadline",
         "a.center_id AS center_id",
         "u.email AS email",
         "p.full_name AS full_name",
@@ -68,6 +76,8 @@ export class AdminApplicationsService {
         license_class: string
         status: string
         submitted_at: Date | null
+        dossier_requested_at: Date | null
+        dossier_deadline: Date | null
         center_id: string | null
         email: string
         full_name: string | null
@@ -78,6 +88,8 @@ export class AdminApplicationsService {
       licenseClass: r.license_class,
       status: r.status,
       submittedAt: r.submitted_at,
+      dossierRequestedAt: r.dossier_requested_at,
+      dossierDeadline: r.dossier_deadline,
       centerId: r.center_id,
       studentEmail: r.email,
       studentName: r.full_name ?? r.email,

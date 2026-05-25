@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common"
 import { InjectRepository } from "@nestjs/typeorm"
 import { Repository } from "typeorm"
+import { TrainingCenter } from "../../entities/schedule-slot.entity"
 import { StudentProfile } from "../../entities/student-profile.entity"
 import { User } from "../../entities/user.entity"
 import { UpdateMeDto } from "./dto/update-me.dto"
@@ -12,6 +13,8 @@ export class UsersService {
     private readonly usersRepo: Repository<User>,
     @InjectRepository(StudentProfile)
     private readonly profilesRepo: Repository<StudentProfile>,
+    @InjectRepository(TrainingCenter)
+    private readonly centersRepo: Repository<TrainingCenter>,
   ) {}
 
   async getMe(userId: string) {
@@ -24,10 +27,18 @@ export class UsersService {
       throw new NotFoundException("User not found")
     }
 
+    let centerName: string | null = null
+    if (user.centerId) {
+      const center = await this.centersRepo.findOne({ where: { id: user.centerId } })
+      centerName = center?.name ?? null
+    }
+
     return {
       id: user.id,
       email: user.email,
       role: user.role,
+      centerId: user.centerId ?? null,
+      centerName,
       profile: user.profile
         ? {
             fullName: user.profile.fullName,

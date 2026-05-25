@@ -13,6 +13,8 @@ import { LicenseClass } from "../entities/license-class.entity"
 import { LookupRecord } from "../entities/lookup-record.entity"
 import { Notification } from "../entities/notification.entity"
 import { Question } from "../entities/question.entity"
+import { ClassSession } from "../entities/class-session.entity"
+import { SessionAttendance } from "../entities/session-attendance.entity"
 import { ExamRegistration, ScheduleSlot, TrainingCenter } from "../entities/schedule-slot.entity"
 import { Payment } from "../entities/payment.entity"
 import { StudentProfile } from "../entities/student-profile.entity"
@@ -56,6 +58,8 @@ import { User } from "../entities/user.entity"
             LicenseApplication,
             ApplicationDocument,
             CourseEnrollment,
+            ClassSession,
+            SessionAttendance,
           ],
           synchronize: false,
         }

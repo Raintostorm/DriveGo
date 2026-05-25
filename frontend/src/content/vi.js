@@ -30,6 +30,10 @@ export const vi = {
     adminApplications: "Hồ sơ HV",
     adminApplicationDetail: "Chi tiết hồ sơ",
     adminSchedules: "Lịch & duyệt ca",
+    adminSlots: "Quản lý ca thi",
+    adminClassSessions: "Lịch học & điểm danh",
+    adminCourses: "Khóa học & nội dung",
+    adminCenters: "Trung tâm",
     features: "Tính năng",
     support: "Hỗ trợ",
     courses: "Khóa học",
@@ -314,6 +318,11 @@ export const vi = {
     saveError: "Lưu nháp thất bại.",
     uploadError: "Tải file thất bại.",
     submitError: "Nộp hồ sơ thất bại — kiểm tra đủ giấy tờ bắt buộc.",
+    proactiveHint:
+      "Bạn có thể tự hoàn thiện và nộp hồ sơ khi trạng thái là nháp. Học lý thuyết và thi thử không cần hồ sơ.",
+    waitingResubmit:
+      "Hồ sơ đã nộp và đang chờ trung tâm xử lý. Chỉnh sửa được khi trung tâm gửi yêu cầu nộp lại (thông báo hoặc email).",
+    statusUnknown: "Không xác định",
     status: {
       draft: "Nháp",
       submitted: "Đã nộp",

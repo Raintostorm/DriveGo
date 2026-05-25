@@ -1,0 +1,36 @@
+{
+  "chapters": [
+    {
+      "id": "44444444-4444-4444-8441-444444444401",
+      "title": "Chương 1: Biển báo & hiệu lệnh (A1)",
+      "sortOrder": 1,
+      "durationMinutes": 45,
+      "videoUrl": "https://www.youtube-nocookie.com/embed/8ndOIY5FNeo?rel=0&modestbranding=1",
+      "description": "Biển báo và quy tắc cơ bản cho bằng A1."
+    },
+    {
+      "id": "44444444-4444-4444-8441-444444444402",
+      "title": "Chương 2: Quy tắc giao thông xe máy",
+      "sortOrder": 2,
+      "durationMinutes": 50,
+      "videoUrl": "https://www.youtube-nocookie.com/embed/jEqaK9lvlvA?rel=0&modestbranding=1",
+      "description": "Ưu tiên, làn đường và khoảng cách khi điều khiển xe máy."
+    },
+    {
+      "id": "44444444-4444-4444-8441-444444444403",
+      "title": "Chương 3: Kỹ năng lái xe máy an toàn",
+      "sortOrder": 3,
+      "durationMinutes": 40,
+      "videoUrl": "https://www.youtube-nocookie.com/embed/MFx-VLUi4tw?rel=0&modestbranding=1",
+      "description": "Thao tác an toàn ban ngày/đêm và thời tiết xấu."
+    },
+    {
+      "id": "44444444-4444-4444-8441-444444444404",
+      "title": "Chương 4: Ôn đề thi thử A1",
+      "sortOrder": 4,
+      "durationMinutes": 35,
+      "videoUrl": "https://www.youtube-nocookie.com/embed/Uv_j-wkRFHE?rel=0&modestbranding=1",
+      "description": "Luyện 600 câu lý thuyết (đề thi thử)."
+    }
+  ]
+}

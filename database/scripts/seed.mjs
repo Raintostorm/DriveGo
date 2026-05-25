@@ -5,8 +5,6 @@ import {
   DEMO_ARTICLES,
   DEMO_NOTIFICATIONS,
   LOOKUP_CODES,
-  buildPaper1Questions,
-  buildPaper2Questions,
 } from "./seed-content.mjs"
 
 const DATABASE_URL =
@@ -33,18 +31,6 @@ const ID = {
   chapter2: "44444444-4444-4444-8444-444444444402",
   chapter3: "44444444-4444-4444-8444-444444444403",
   chapter4: "44444444-4444-4444-8444-444444444404",
-  paper1: "55555555-5555-4555-8555-555555555501",
-  paper2: "55555555-5555-4555-8555-555555555502",
-  question1: "66666666-6666-4666-8666-666666666601",
-  question2: "66666666-6666-4666-8666-666666666602",
-  question3: "66666666-6666-4666-8666-666666666603",
-  question4: "66666666-6666-4666-8666-666666666604",
-  question5: "66666666-6666-4666-8666-666666666605",
-  question6: "66666666-6666-4666-8666-666666666606",
-  question7: "66666666-6666-4666-8666-666666666607",
-  question8: "66666666-6666-4666-8666-666666666608",
-  question9: "66666666-6666-4666-8666-666666666609",
-  question10: "66666666-6666-4666-8666-666666666610",
   slot1: "77777777-7777-4777-8777-777777777701",
   slot2: "77777777-7777-4777-8777-777777777702",
   slot3: "77777777-7777-4777-8777-777777777703",
@@ -65,7 +51,6 @@ const ID = {
   chatSession3: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa03",
 }
 
-const PAPER_IDS = [ID.paper1, ID.paper2]
 const CHAPTER_IDS = [ID.chapter1, ID.chapter2, ID.chapter3, ID.chapter4]
 const SLOT_IDS = [ID.slot1, ID.slot2, ID.slot3, ID.slot4, ID.slot5, ID.slotRoad1, ID.slotRoad2]
 const ARTICLE_IDS = [ID.article1, ID.article2, ID.article3, ID.article4, ID.article5, ID.article6]
@@ -78,29 +63,26 @@ async function clearDemoData() {
   await client.query(`DELETE FROM lookup_records WHERE national_id_or_code = ANY($1::text[])`, [
     LOOKUP_CODE_LIST,
   ])
-  await client.query(`DELETE FROM questions WHERE paper_id = ANY($1::uuid[])`, [PAPER_IDS])
-  await client.query(`DELETE FROM exam_papers WHERE id = ANY($1::uuid[])`, [PAPER_IDS])
   await client.query(`DELETE FROM schedule_slots WHERE id = ANY($1::uuid[])`, [SLOT_IDS])
   await client.query(`DELETE FROM document_articles WHERE slug = ANY($1::text[])`, [ARTICLE_SLUGS])
   await client.query(`DELETE FROM study_chapters WHERE id = ANY($1::uuid[])`, [CHAPTER_IDS])
-  await client.query(`DELETE FROM license_classes WHERE code IN ('A1', 'A2', 'B1', 'B2')`)
-}
-
-async function insertQuestions(paperId, questions) {
-  for (const q of questions) {
-    await client.query(
-      `INSERT INTO questions (id, paper_id, body, answers, correct_index, is_critical) VALUES
-       ($1, $2, $3, $4::jsonb, $5, $6)
-       ON CONFLICT (id) DO UPDATE SET body = EXCLUDED.body, answers = EXCLUDED.answers`,
-      [q.id, paperId, q.body, JSON.stringify(q.answers), q.correctIndex, q.isCritical],
+  await client.query(`
+    DELETE FROM study_progress WHERE chapter_id IN (
+      SELECT id FROM study_chapters WHERE license_class_id IN (
+        SELECT id FROM license_classes WHERE code IN ('A1', 'A2', 'B1', 'B2')
+      )
     )
-  }
+  `)
+  await client.query(`
+    DELETE FROM study_chapters WHERE license_class_id IN (
+      SELECT id FROM license_classes WHERE code IN ('A1', 'A2', 'B1', 'B2')
+    )
+  `)
+  await client.query(`DELETE FROM license_classes WHERE code IN ('A1', 'A2', 'B1', 'B2')`)
 }
 
 async function seed() {
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10)
-  const paper1Questions = buildPaper1Questions(ID)
-  const paper2Questions = buildPaper2Questions(ID)
 
   await client.query(
     `INSERT INTO training_centers (id, name, tax_code, city, address)
@@ -164,13 +146,13 @@ async function seed() {
   await client.query(
     `INSERT INTO study_chapters (id, license_class_id, title, sort_order, duration_minutes, video_url, description) VALUES
      ($1, $5, 'Chương 1: Biển báo hiệu đường bộ', 1, 45,
-      'https://www.youtube-nocookie.com/embed/uxUPB3650Dg?rel=0&modestbranding=1', 'Nhận biết biển báo cấm, nguy hiểm và hiệu lệnh.'),
+      'https://www.youtube-nocookie.com/embed/8ndOIY5FNeo?rel=0&modestbranding=1', 'Nhận biết biển báo cấm, nguy hiểm và hiệu lệnh.'),
      ($2, $5, 'Chương 2: Quy tắc giao thông', 2, 50,
-      'https://www.youtube-nocookie.com/embed/LlSwGVdgP80?rel=0&modestbranding=1', 'Quy tắc ưu tiên, làn đường và khoảng cách an toàn.'),
+      'https://www.youtube-nocookie.com/embed/jEqaK9lvlvA?rel=0&modestbranding=1', 'Quy tắc ưu tiên, làn đường và khoảng cách an toàn.'),
      ($3, $5, 'Chương 3: Kỹ thuật lái xe an toàn', 3, 40,
-      'https://www.youtube-nocookie.com/embed/gmqXczpogrA?rel=0&modestbranding=1', 'Lái ban đêm, đường mưa và cao tốc.'),
+      'https://www.youtube-nocookie.com/embed/MFx-VLUi4tw?rel=0&modestbranding=1', 'Lái ban đêm, đường mưa và cao tốc.'),
      ($4, $5, 'Chương 4: Giải đề thi thử', 4, 35,
-      'https://www.youtube-nocookie.com/embed/YN-hDPsGpsg?rel=0&modestbranding=1', 'Mẹo giải câu điểm liệt và tình huống mỹ phẩm.')
+      'https://www.youtube-nocookie.com/embed/Uv_j-wkRFHE?rel=0&modestbranding=1', 'Mẹo giải câu điểm liệt và tình huống mô phỏng.')
      ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, video_url = EXCLUDED.video_url`,
     [ID.chapter1, ID.chapter2, ID.chapter3, ID.chapter4, b2Id],
   )
@@ -180,26 +162,6 @@ async function seed() {
      ($1, $2, 12, 45), ($1, $3, 5, 20), ($1, $4, 0, 0), ($1, $5, 0, 0)
      ON CONFLICT (user_id, chapter_id) DO UPDATE SET percent = EXCLUDED.percent`,
     [ID.userStudent, ID.chapter1, ID.chapter2, ID.chapter3, ID.chapter4],
-  )
-
-  await client.query(
-    `INSERT INTO exam_papers (id, license_class, paper_number, question_count, is_mock) VALUES
-     ($1, 'B2', 8, $3, true), ($2, 'B2', 7, $4, true)
-     ON CONFLICT (id) DO UPDATE SET question_count = EXCLUDED.question_count`,
-    [ID.paper1, ID.paper2, paper1Questions.length, paper2Questions.length],
-  )
-
-  await insertQuestions(ID.paper1, paper1Questions)
-  await insertQuestions(ID.paper2, paper2Questions)
-
-  await client.query(
-    `INSERT INTO exam_attempts (user_id, paper_id, started_at, finished_at, score, passed, answers) VALUES
-     ($1, $2, NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day' + INTERVAL '12 minutes', 9, true, '{"correct":9,"wrong":1}'::jsonb),
-     ($1, $2, NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days' + INTERVAL '18 minutes', 10, true, '{"correct":10,"wrong":0}'::jsonb),
-     ($1, $3, NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days' + INTERVAL '22 minutes', 6, false, '{"correct":6,"wrong":4}'::jsonb),
-     ($1, $3, NOW() - INTERVAL '8 days', NOW() - INTERVAL '8 days' + INTERVAL '15 minutes', 8, true, '{"correct":8,"wrong":2}'::jsonb),
-     ($1, $2, NOW() - INTERVAL '12 days', NOW() - INTERVAL '12 days' + INTERVAL '20 minutes', 7, false, '{"correct":7,"wrong":3}'::jsonb)`,
-    [ID.userStudent, ID.paper1, ID.paper2],
   )
 
   await client.query(
@@ -345,6 +307,7 @@ async function main() {
   counts.rows.forEach((r) => console.log(` - ${r.entity}: ${r.n}`))
   await client.end()
   console.log("\nSeed completed.")
+  console.log("Next: npm run import:content:all  (20 đề × 4 hạng A1–B2)")
 }
 
 main().catch((err) => {

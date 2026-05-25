@@ -59,6 +59,16 @@ try {
   }
   const licenseClassId = licenseRow.rows[0].id
 
+  await client.query(
+    `DELETE FROM exam_attempts WHERE paper_id IN (SELECT id FROM exam_papers WHERE license_class = $1)`,
+    [licenseCode],
+  )
+  await client.query(
+    `DELETE FROM questions WHERE paper_id IN (SELECT id FROM exam_papers WHERE license_class = $1)`,
+    [licenseCode],
+  )
+  await client.query(`DELETE FROM exam_papers WHERE license_class = $1`, [licenseCode])
+
   const chaptersPath = join(contentDir, "chapters.json")
   const chaptersData = readJson(chaptersPath)
   if (chaptersData?.chapters?.length) {

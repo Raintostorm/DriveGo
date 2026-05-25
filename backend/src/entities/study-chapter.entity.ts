@@ -27,4 +27,7 @@ export class StudyChapter {
 
   @Column({ type: "text", nullable: true })
   description?: string | null
+
+  @Column({ name: "is_published", type: "boolean", default: true })
+  isPublished!: boolean
 }

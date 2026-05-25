@@ -1,12 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react"
 import { apiFetch, clearAuthToken, getAuthToken, setAuthToken } from "../lib/api.js"
+import { dashboardPathForRole } from "../lib/roles.js"
+
+export { dashboardPathForRole }
 
 const AuthContext = createContext(null)
-
-export function dashboardPathForRole(role) {
-  if (role === "system_admin" || role === "center_admin") return "/admin-dashboard"
-  return "/student-dashboard"
-}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)

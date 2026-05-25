@@ -10,7 +10,10 @@ import { join, extname } from "path"
 import { randomUUID } from "crypto"
 import { Repository } from "typeorm"
 import { ApplicationDocument } from "../../entities/application-document.entity"
-import { LicenseApplication } from "../../entities/license-application.entity"
+import {
+  ApplicationStatus,
+  LicenseApplication,
+} from "../../entities/license-application.entity"
 import { StudentProfile } from "../../entities/student-profile.entity"
 import {
   isValidDocType,
@@ -55,10 +58,10 @@ export class ApplicationsService {
 
   async assertApprovedForExam(userId: string) {
     const app = await this.appsRepo.findOne({
-      where: { userId },
+      where: { userId, status: "approved" },
       order: { updatedAt: "DESC" },
     })
-    if (app?.status !== "approved") {
+    if (!app) {
       throw new ForbiddenException(
         "Cần hồ sơ sát hạch đã được duyệt trước khi đăng ký ca thi chính thức.",
       )
@@ -73,6 +76,22 @@ export class ApplicationsService {
     const app = await this.appsRepo.findOne({ where: { id: applicationId } })
     if (!app) throw new NotFoundException("Không tìm thấy hồ sơ")
 
+    if (app.status === "draft") {
+      throw new BadRequestException(
+        "Học viên chưa nộp hồ sơ lần đầu — không cần yêu cầu nộp hồ sơ",
+      )
+    }
+
+    const allowed: ApplicationStatus[] = [
+      "submitted",
+      "reviewing",
+      "approved",
+      "rejected",
+    ]
+    if (!allowed.includes(app.status)) {
+      throw new BadRequestException("Không thể yêu cầu nộp hồ sơ ở trạng thái hiện tại")
+    }
+
     app.dossierRequestedAt = new Date()
     if (deadline) app.dossierDeadline = deadline
     await this.appsRepo.save(app)
@@ -85,17 +104,24 @@ export class ApplicationsService {
   }
 
   async getMyApplication(userId: string) {
-    const app = await this.findLatestForUser(userId)
+    const app = await this.resolveApplicationForStudent(userId)
     if (!app) {
       return {
         application: null,
-        examEligible: false,
+        examEligible: await this.hasApprovedApplication(userId),
       }
     }
     return {
       application: this.toResponse(app),
-      examEligible: this.isExamEligible(app.status),
+      examEligible: await this.hasApprovedApplication(userId),
     }
+  }
+
+  private async hasApprovedApplication(userId: string) {
+    const count = await this.appsRepo.count({
+      where: { userId, status: "approved" },
+    })
+    return count > 0
   }
 
   private isExamEligible(status?: string) {
@@ -221,8 +247,12 @@ export class ApplicationsService {
 
   async submitApplication(userId: string, applicationId: string) {
     const app = await this.getOwnedApplication(userId, applicationId)
-    if (app.status !== "draft") {
+    const resubmit = Boolean(app.dossierRequestedAt)
+    if (app.status !== "draft" && !resubmit) {
       throw new BadRequestException("Hồ sơ đã được nộp")
+    }
+    if (!this.canModifyApplication(app)) {
+      throw new BadRequestException("Không thể nộp hồ sơ ở trạng thái hiện tại")
     }
 
     const docs = await this.docsRepo.find({ where: { applicationId } })
@@ -248,6 +278,10 @@ export class ApplicationsService {
 
     app.status = "submitted"
     app.submittedAt = new Date()
+    if (resubmit) {
+      app.dossierRequestedAt = null
+      app.dossierDeadline = null
+    }
     await this.appsRepo.save(app)
 
     const reloaded = await this.appsRepo.findOne({
@@ -282,6 +316,21 @@ export class ApplicationsService {
       mimeType: doc.mimeType ?? "application/octet-stream",
       originalName: doc.originalName ?? "document",
     }
+  }
+
+  /** Ưu tiên nháp đang soạn; không thì bản mới nhất (đã nộp / chờ nộp lại). */
+  private async resolveApplicationForStudent(userId: string) {
+    const draft = await this.findDraftForUser(userId)
+    if (draft) return draft
+    return this.findLatestForUser(userId)
+  }
+
+  private async findDraftForUser(userId: string) {
+    return this.appsRepo.findOne({
+      where: { userId, status: "draft" },
+      relations: { documents: true },
+      order: { updatedAt: "DESC" },
+    })
   }
 
   private async findLatestForUser(userId: string) {
@@ -336,7 +385,7 @@ export class ApplicationsService {
     return {
       id: app.id,
       licenseClass: app.licenseClass,
-      status: app.status,
+      status: app.status ?? "draft",
       personalInfo: app.personalInfo ?? {},
       submittedAt: app.submittedAt,
       dossierRequestedAt: app.dossierRequestedAt,

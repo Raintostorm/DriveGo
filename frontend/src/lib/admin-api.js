@@ -66,6 +66,148 @@ export async function fetchAdminStudents(params = {}) {
   return apiFetch(`/admin/students${qs ? `?${qs}` : ""}`, { auth: true })
 }
 
+export async function fetchAdminStudent(userId) {
+  return apiFetch(`/admin/students/${userId}`, { auth: true })
+}
+
+export async function patchAdminStudentNote(userId, adminNote) {
+  return apiFetch(`/admin/students/${userId}/note`, {
+    method: "PATCH",
+    auth: true,
+    body: JSON.stringify({ adminNote }),
+  })
+}
+
+export async function fetchAdminEnrollments(params = {}) {
+  const q = new URLSearchParams()
+  if (params.status) q.set("status", params.status)
+  if (params.licenseClass) q.set("licenseClass", params.licenseClass)
+  const qs = q.toString()
+  return apiFetch(`/admin/enrollments${qs ? `?${qs}` : ""}`, { auth: true })
+}
+
+export async function fetchAdminPayments(params = {}) {
+  const q = new URLSearchParams()
+  if (params.status) q.set("status", params.status)
+  const qs = q.toString()
+  return apiFetch(`/admin/payments${qs ? `?${qs}` : ""}`, { auth: true })
+}
+
+export async function fetchAdminSlots(params = {}) {
+  const q = new URLSearchParams()
+  if (params.slotType) q.set("slotType", params.slotType)
+  const qs = q.toString()
+  return apiFetch(`/admin/schedule-slots${qs ? `?${qs}` : ""}`, { auth: true })
+}
+
+export async function createAdminSlot(body) {
+  return apiFetch("/admin/schedule-slots", {
+    method: "POST",
+    auth: true,
+    body: JSON.stringify(body),
+  })
+}
+
+export async function patchAdminSlot(id, body) {
+  return apiFetch(`/admin/schedule-slots/${id}`, {
+    method: "PATCH",
+    auth: true,
+    body: JSON.stringify(body),
+  })
+}
+
+export async function deleteAdminSlot(id) {
+  return apiFetch(`/admin/schedule-slots/${id}`, { method: "DELETE", auth: true })
+}
+
+export async function fetchAdminLicenseClasses() {
+  return apiFetch("/admin/license-classes/manage", { auth: true })
+}
+
+export async function patchAdminLicenseClass(code, body) {
+  return apiFetch(`/admin/license-classes/${code}`, {
+    method: "PATCH",
+    auth: true,
+    body: JSON.stringify(body),
+  })
+}
+
+export async function fetchAdminChapters(code) {
+  return apiFetch(`/admin/chapters/by-class/${code}`, { auth: true })
+}
+
+export async function patchAdminChapter(id, body) {
+  return apiFetch(`/admin/chapters/${id}`, {
+    method: "PATCH",
+    auth: true,
+    body: JSON.stringify(body),
+  })
+}
+
+export async function fetchAdminClassSessions() {
+  return apiFetch("/admin/class-sessions", { auth: true })
+}
+
+export async function createAdminClassSession(body) {
+  return apiFetch("/admin/class-sessions", {
+    method: "POST",
+    auth: true,
+    body: JSON.stringify(body),
+  })
+}
+
+export async function patchAdminClassSession(id, body) {
+  return apiFetch(`/admin/class-sessions/${id}`, {
+    method: "PATCH",
+    auth: true,
+    body: JSON.stringify(body),
+  })
+}
+
+export async function deleteAdminClassSession(id) {
+  return apiFetch(`/admin/class-sessions/${id}`, { method: "DELETE", auth: true })
+}
+
+export async function fetchAdminSessionAttendance(sessionId) {
+  return apiFetch(`/admin/class-sessions/${sessionId}/attendance`, { auth: true })
+}
+
+export async function adminSessionCheckIn(sessionId, userId) {
+  return apiFetch(`/admin/class-sessions/${sessionId}/attendance`, {
+    method: "POST",
+    auth: true,
+    body: JSON.stringify({ userId }),
+  })
+}
+
+export async function fetchAdminCenters() {
+  return apiFetch("/admin/centers", { auth: true })
+}
+
+export async function createAdminCenter(body) {
+  return apiFetch("/admin/centers", {
+    method: "POST",
+    auth: true,
+    body: JSON.stringify(body),
+  })
+}
+
+export async function patchAdminCenter(id, body) {
+  return apiFetch(`/admin/centers/${id}`, {
+    method: "PATCH",
+    auth: true,
+    body: JSON.stringify(body),
+  })
+}
+
+export async function createCenterAdminUser(body) {
+  return apiFetch("/admin/users/center-admin", {
+    method: "POST",
+    auth: true,
+    body: JSON.stringify(body),
+  })
+}
+
 export async function requestAdminDossier(applicationId, body = {}) {
   return apiFetch(`/admin/applications/${applicationId}/request-dossier`, {
     method: "POST",

@@ -195,11 +195,17 @@ export function ProfilePage() {
           )}
           <Link to="/application">
             <PrimaryButton variant="action">
-              {examEligible ? "Xem hồ sơ đã nộp" : "Nộp hồ sơ sát hạch"}
+              {!appStatus
+                ? "Nộp hồ sơ sát hạch"
+                : appStatus === "draft"
+                  ? "Tiếp tục nộp hồ sơ"
+                  : examEligible
+                    ? "Xem hồ sơ đã duyệt"
+                    : "Xem hồ sơ đã nộp"}
             </PrimaryButton>
           </Link>
         </div>
-        {!examEligible ? (
+        {!examEligible && appStatus && appStatus !== "draft" ? (
           <p className="mt-3 text-xs text-amber-300/90">{t("pages.profile.examDossierRequired")}</p>
         ) : null}
       </UiCard>

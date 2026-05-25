@@ -6,7 +6,9 @@ import { StatusBadge } from "../components/StatusBadge.jsx"
 import { TextField } from "../components/TextField.jsx"
 import { UiCard } from "../components/UiCard.jsx"
 import { useLicense } from "../context/LicenseContext.jsx"
+import { unwrapApplication } from "../lib/applicationApi.js"
 import { apiFetch, apiFetchBlob, apiUpload } from "../lib/api.js"
+import { vi } from "../content/vi.js"
 import { t } from "../lib/strings.js"
 
 const DOC_TYPE_KEYS = {
@@ -32,18 +34,19 @@ function docLabel(docType) {
 }
 
 function statusLabel(status) {
-  const key = `application.status.${status}`
-  const label = t(key)
-  return label === key ? status : label
-}
-
-function unwrapApplication(data) {
-  if (!data) return null
-  return data.application ?? data
+  if (!status) return t("application.statusUnknown")
+  const labels = vi.application?.status
+  if (labels && typeof labels === "object" && status in labels) {
+    return labels[status]
+  }
+  return String(status)
 }
 
 function applyApplicationToForm(app, setters) {
-  if (!app) return
+  if (!app) {
+    setters.setApplication(null)
+    return
+  }
   setters.setApplication(app)
   setters.setLicenseClass(app.licenseClass ?? "B2")
   const info = app.personalInfo ?? {}
@@ -82,8 +85,8 @@ export function ApplicationPage() {
 
   const isDraft = application?.status === "draft"
   const dossierRequested = Boolean(application?.dossierRequestedAt)
-  const readOnly =
-    application && application.status !== "draft" && !dossierRequested
+  const canModify = !application || isDraft || dossierRequested
+  const readOnly = application && !canModify
 
   const loadApplication = useCallback(async () => {
     setLoading(true)
@@ -111,6 +114,7 @@ export function ApplicationPage() {
         setPermanentAddress,
       })
     } catch (err) {
+      setApplication(null)
       setError(err instanceof Error ? err.message : t("application.loadError"))
     } finally {
       setLoading(false)
@@ -261,13 +265,31 @@ export function ApplicationPage() {
     <section className="space-y-6">
       <PageHeader title={t("application.title")} subtitle={t("application.subtitle")} />
 
-      <p className="rounded-drive border border-drive-border-soft bg-drive-sidebar px-4 py-3 text-sm text-drive-muted">
-        Nộp hồ sơ khi trung tâm yêu cầu hoặc trước hạn đăng ký ca thi chính thức. Học và thi thử
-        không cần hồ sơ.{" "}
-        <Link to="/profile" className="font-medium text-drive-action hover:underline">
-          Hồ sơ cá nhân
-        </Link>
-      </p>
+      {canModify && isDraft ? (
+        <p className="rounded-drive border border-drive-action/30 bg-drive-action/10 px-4 py-3 text-sm text-drive-text">
+          {t("application.proactiveHint")}{" "}
+          <Link to="/profile" className="font-medium text-drive-action hover:underline">
+            Hồ sơ cá nhân
+          </Link>
+        </p>
+      ) : (
+        <p className="rounded-drive border border-drive-border-soft bg-drive-sidebar px-4 py-3 text-sm text-drive-muted">
+          {t("application.profileNote")}{" "}
+          <Link to="/profile" className="font-medium text-drive-action hover:underline">
+            Hồ sơ cá nhân
+          </Link>
+        </p>
+      )}
+
+      {readOnly && application ? (
+        <UiCard variant="panel" className="border-drive-border">
+          <p className="text-sm text-drive-muted">
+            Hồ sơ đang ở trạng thái{" "}
+            <strong className="text-white">{statusLabel(application.status)}</strong>.{" "}
+            {t("application.waitingResubmit")}
+          </p>
+        </UiCard>
+      ) : null}
 
       {dossierRequested ? (
         <UiCard variant="panel" className="border-amber-500/40 bg-amber-500/10">
@@ -410,7 +432,7 @@ export function ApplicationPage() {
                       />
                     ) : null}
                   </div>
-                  {isDraft ? (
+                  {canModify ? (
                     <label className="inline-flex cursor-pointer items-center justify-center rounded-drive border border-drive-primary px-4 py-2 text-sm font-medium text-drive-primary hover:bg-drive-primary/5">
                       {uploadingKey === key ? t("common.loading") : t("application.chooseFile")}
                       <input
@@ -434,13 +456,17 @@ export function ApplicationPage() {
           </ul>
         </UiCard>
 
-        {isDraft ? (
+        {canModify ? (
           <div className="flex flex-wrap gap-3">
             <PrimaryButton type="submit" disabled={saving}>
               {saving ? t("common.loading") : t("application.saveDraft")}
             </PrimaryButton>
             <PrimaryButton type="button" disabled={submitting} onClick={handleSubmit}>
-              {submitting ? t("common.loading") : t("application.submit")}
+              {submitting
+                ? t("common.loading")
+                : dossierRequested
+                  ? "Nộp lại hồ sơ"
+                  : t("application.submit")}
             </PrimaryButton>
           </div>
         ) : null}

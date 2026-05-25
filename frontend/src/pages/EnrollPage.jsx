@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Link, useSearchParams } from "react-router-dom"
+import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import { PrimaryButton } from "../components/PrimaryButton.jsx"
 import { TextField } from "../components/TextField.jsx"
 import { UiCard } from "../components/UiCard.jsx"
@@ -19,7 +19,8 @@ export function EnrollPage() {
     classParam && isStudyLicenseCode(classParam) ? classParam : DEFAULT_LICENSE_CLASS
 
   const { user, refreshUser } = useAuth()
-  const { refreshEnrollments, isEnrolled } = useLicense()
+  const navigate = useNavigate()
+  const { refreshEnrollments, isEnrolled, setActiveClass } = useLicense()
   const [fullName, setFullName] = useState(user?.profile?.fullName ?? "")
   const [email, setEmail] = useState(user?.email ?? "")
   const [checkout, setCheckout] = useState(null)
@@ -46,17 +47,23 @@ export function EnrollPage() {
           const status = await apiFetch(`/payments/${paymentId}/status`, { auth: true })
           if (status.status === "paid") {
             stopPolling()
-            setNotice("Thanh toán thành công — bạn có thể học và thi thử ngay.")
+            setNotice("Thanh toán thành công — chuyển sang học lý thuyết…")
             await refreshEnrollments()
             await refreshUser()
             setCheckout(null)
+            try {
+              await setActiveClass(licenseClass)
+            } catch {
+              /* profile update optional */
+            }
+            navigate("/theory", { replace: true })
           }
         } catch {
           /* ignore poll errors */
         }
       }, 4000)
     },
-    [refreshEnrollments, refreshUser, stopPolling],
+    [licenseClass, navigate, refreshEnrollments, refreshUser, setActiveClass, stopPolling],
   )
 
   useEffect(() => () => stopPolling(), [stopPolling])
@@ -196,10 +203,15 @@ export function EnrollPage() {
                   auth: true,
                 })
                 if (status.status === "paid") {
-                  setNotice("Thanh toán thành công!")
                   await refreshEnrollments()
                   await refreshUser()
                   setCheckout(null)
+                  try {
+                    await setActiveClass(licenseClass)
+                  } catch {
+                    /* ignore */
+                  }
+                  navigate("/theory", { replace: true })
                 } else {
                   setNotice("Chưa nhận được thanh toán — thử lại sau vài giây.")
                 }

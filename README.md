@@ -37,17 +37,20 @@ npm run dev:be       # chỉ backend
 
 ## Tài liệu
 
+- **[Hướng dẫn cài đặt & seed database](docs/HUONG-DAN-CAI-DAT.md)** (tiếng Việt)
 - [Kiến trúc](docs/architecture.md)
 - [Domain từ UI](docs/domain-from-ui.md)
 - [Figma map](docs/figma-map.md)
 
 ## Database
 
-Schema placeholder trong `database/schema/`. Khi có connection string, điền `.env` và chạy migration theo `database/README.md`.
-
 ```bash
-npm run test:db   # kiểm tra kết nối
-npm run seed:db   # dữ liệu demo (xem database/seeds/README.md)
+npm run setup:env    # tạo .env từ example
+npm run test:db      # kiểm tra kết nối PostgreSQL
+npm run seed:db      # tài khoản demo + dữ liệu mẫu
+npm run reset:db     # làm sạch DB + migration + seed + import A1–B2
 ```
+
+Chi tiết: [docs/HUONG-DAN-CAI-DAT.md](docs/HUONG-DAN-CAI-DAT.md), [database/seeds/README.md](database/seeds/README.md).
 
 Tích hợp bên thứ ba (Firebase, thanh toán, AI): [docs/integrations.md](docs/integrations.md)

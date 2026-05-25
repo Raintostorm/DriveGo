@@ -97,11 +97,24 @@ npm run migrate:admin
 - `/admin/applications` — tải & duyệt hồ sơ
 - `/admin/schedules` — xác nhận ca lý thuyết / chạy thử
 
-## Chạy import
+## Nội dung A1–B2 (MVP — dùng chung 600 câu)
+
+Sau `parse:b2-pdf`, chạy một lệnh để sinh folder A1/A2/B1 và import cả 4 hạng:
+
+```bash
+npm run seed:db
+npm run bootstrap:content      # chỉ sinh JSON (A1/A2/B1 từ B2)
+npm run import:content:all     # bootstrap + import PostgreSQL
+```
+
+- Mỗi hạng: **4 chương** YouTube + **20 đề × ~30 câu** (tổng ~599 câu, thiếu câu 507 trong PDF).
+- Ảnh đề dùng chung `/content/B2/images/` (không copy PNG sang A1/A2/B1).
+
+## Chạy import từng hạng
 
 ```bash
 npm run import:content -- A1 database/content/A1
 npm run import:content -- B2 database/content/B2
 ```
 
-Script **upsert** theo `id` / `slug` / `(application_id, doc_type, slot)` — không xóa nội dung hạng khác.
+Import xóa `exam_papers` / `questions` cũ **cùng hạng** rồi nạp lại (tránh đề demo seed).

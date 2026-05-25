@@ -1,0 +1,102 @@
+import { useMemo } from "react"
+import { Link, useNavigate } from "react-router-dom"
+import { BrandLogo } from "../BrandLogo.jsx"
+import { PrimaryButton } from "../PrimaryButton.jsx"
+import { LicenseClassSwitcher } from "../LicenseClassSwitcher.jsx"
+import { SidebarNav } from "../SidebarNav.jsx"
+import { useAuth } from "../../context/AuthContext.jsx"
+import { formatPremiumDate, isPremiumActive } from "../../lib/premium.js"
+import { t } from "../../lib/strings.js"
+
+/**
+ * @param {{
+ *   children: import('react').ReactNode
+ *   variant: 'student' | 'admin'
+ *   navItems: { to: string, labelKey: string }[]
+ * }} props
+ */
+export function DashboardShell({ children, variant, navItems }) {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+  const premium = isPremiumActive(user)
+
+  const items = useMemo(() => {
+    if (variant !== "student") return navItems
+    if (!premium) return navItems
+    return navItems.map((item) =>
+      item.to === "/upgrade" ? { ...item, labelKey: "nav.premiumPlan" } : item,
+    )
+  }, [variant, navItems, premium])
+
+  function handleLogout() {
+    logout()
+    navigate("/login", { replace: true })
+  }
+
+  return (
+    <div className="-mx-4 flex min-h-[calc(100vh-3rem)] flex-col sm:-mx-6 lg:-mx-10 lg:flex-row">
+      <div className="border-b border-drive-border-soft bg-drive-sidebar px-4 py-4 lg:fixed lg:inset-y-0 lg:left-0 lg:z-20 lg:w-72 lg:border-r lg:border-b-0 lg:px-0 lg:py-6">
+        <div className="mb-6 hidden px-5 lg:block">
+          <BrandLogo />
+          {variant === "admin" ? (
+            <p className="mt-2 text-xs font-medium uppercase tracking-wide text-drive-action">
+              Portal quản trị
+            </p>
+          ) : null}
+        </div>
+        <Link
+          to={variant === "admin" ? "/admin-dashboard" : "/home"}
+          className="mb-4 flex items-center gap-2 px-2 lg:hidden"
+        >
+          <BrandLogo size="sm" />
+        </Link>
+        <SidebarNav items={items} />
+        {variant === "student" ? (
+          <div className="mt-4">
+            <LicenseClassSwitcher />
+          </div>
+        ) : null}
+        <div className="mt-6 space-y-2 px-3">
+          {variant === "student" ? (
+            premium ? (
+              <Link
+                to="/upgrade"
+                className="block rounded-drive border border-drive-success/40 bg-drive-success/10 px-3 py-2.5 text-center transition hover:bg-drive-success/15"
+              >
+                <span className="text-sm font-semibold text-drive-success">★ Premium</span>
+                <span className="mt-0.5 block text-xs text-drive-muted">
+                  {t("pages.upgrade.validUntil")}{" "}
+                  {formatPremiumDate(user?.profile?.premiumUntil)}
+                </span>
+              </Link>
+            ) : (
+              <Link to="/upgrade">
+                <PrimaryButton variant="action" fullWidth>
+                  {t("nav.upgrade")} Premium
+                </PrimaryButton>
+              </Link>
+            )
+          ) : null}
+          {user ? (
+            <p className="truncate px-1 text-xs text-drive-muted" title={user.email}>
+              {user.profile?.fullName || user.email}
+              {variant === "admin" && user.role ? (
+                <span className="block text-[10px] text-drive-placeholder">{user.role}</span>
+              ) : null}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full rounded-drive-pill border border-drive-border py-2.5 text-sm text-drive-muted transition hover:text-white"
+          >
+            Đăng xuất
+          </button>
+        </div>
+      </div>
+      <div className="min-w-0 flex-1 lg:pl-72">
+        <div className="px-4 py-6 sm:px-6 lg:px-10">{children}</div>
+      </div>
+    </div>
+  )
+}

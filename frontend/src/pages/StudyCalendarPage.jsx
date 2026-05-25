@@ -1,67 +1,107 @@
+import { useEffect, useState } from "react"
 import { PageHeader } from "../components/PageHeader.jsx"
 import { PrimaryButton } from "../components/PrimaryButton.jsx"
 import { UiCard } from "../components/UiCard.jsx"
+import { apiFetch } from "../lib/api.js"
 import { t } from "../lib/strings.js"
 
-const tasks = [
-  { title: "Hệ thống biển báo GT", date: "16/10/2023 — 08:00", type: "Lý thuyết" },
-  { title: "Thi thử mô phỏng", date: "20/10/2023 — 09:00", type: "Lịch thi" },
-]
-
 export function StudyCalendarPage() {
+  const [sessions, setSessions] = useState([])
+  const [selected, setSelected] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [checking, setChecking] = useState(false)
+  const [message, setMessage] = useState(null)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    apiFetch("/sessions/upcoming", { auth: true })
+      .then((list) => {
+        setSessions(list)
+        setSelected(list[0] ?? null)
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : "Lỗi"))
+      .finally(() => setLoading(false))
+  }, [])
+
+  async function handleCheckIn() {
+    if (!selected?.id) return
+    setChecking(true)
+    setMessage(null)
+    try {
+      await apiFetch(`/sessions/${selected.id}/check-in`, { method: "POST", auth: true, body: "{}" })
+      setMessage("Điểm danh thành công!")
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Không điểm danh được")
+    } finally {
+      setChecking(false)
+    }
+  }
+
   return (
     <section className="space-y-6">
-      <PageHeader title={`${t("pages.studyCalendar.title")} — Tháng 10, 2023`} />
+      <PageHeader title={t("pages.studyCalendar.title")} subtitle="Buổi học tại trung tâm của bạn" />
+
+      {loading ? <p className="text-drive-muted">{t("common.loading")}</p> : null}
+      {error ? <p className="text-drive-danger">{error}</p> : null}
+      {message ? <p className="text-drive-success">{message}</p> : null}
 
       <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
         <UiCard variant="panel">
-          <div className="mb-4 flex flex-wrap gap-4 text-xs">
-            <span className="text-drive-accent">● Lý thuyết</span>
-            <span className="text-drive-success">● Thực hành</span>
-            <span className="text-drive-danger">● Lịch thi</span>
-          </div>
-          <div className="grid grid-cols-7 gap-2 text-center text-sm">
-            {Array.from({ length: 35 }, (_, i) => i + 1).map((d) => (
-              <div
-                key={d}
-                className={`rounded-lg py-2 ${
-                  d === 16 || d === 20
-                    ? "bg-drive-action font-semibold text-white"
-                    : "bg-drive-elevated text-drive-muted"
-                } ${d > 31 ? "opacity-0" : ""}`}
-              >
-                {d <= 31 ? d : ""}
-              </div>
-            ))}
-          </div>
-        </UiCard>
-
-        <div className="space-y-4">
-          <UiCard variant="panel">
-            <p className="text-xs text-drive-muted">Hôm nay, 10 Tháng 10 2023</p>
-            <h2 className="mt-2 font-semibold text-white">{t("pages.studyCalendar.eventDetail")}</h2>
-            <p className="mt-2 text-sm text-drive-text">Hệ thống biển báo GT · 14:30–16:30</p>
-            <p className="text-xs text-drive-muted">Phòng 402, Tòa A — DriveGo</p>
-            <PrimaryButton variant="action" className="mt-4">
-              {t("pages.studyCalendar.checkIn")}
-            </PrimaryButton>
-          </UiCard>
-          <UiCard variant="panel">
-            <h3 className="text-xs font-bold uppercase text-drive-placeholder">
-              {t("pages.studyCalendar.upcoming")}
-            </h3>
-            <ul className="mt-3 space-y-3 text-sm">
-              {tasks.map((task) => (
-                <li key={task.title} className="border-b border-drive-border-soft pb-2 last:border-0">
-                  <p className="font-medium text-white">{task.title}</p>
-                  <p className="text-xs text-drive-muted">
-                    {task.date} · {task.type}
-                  </p>
+          <h3 className="text-xs font-bold uppercase text-drive-placeholder">
+            {t("pages.studyCalendar.upcoming")}
+          </h3>
+          {sessions.length ? (
+            <ul className="mt-3 space-y-2 text-sm">
+              {sessions.map((s) => (
+                <li key={s.id}>
+                  <button
+                    type="button"
+                    onClick={() => setSelected(s)}
+                    className={`w-full rounded-drive border px-3 py-2 text-left ${
+                      selected?.id === s.id
+                        ? "border-drive-action bg-drive-action/10"
+                        : "border-drive-border-soft"
+                    }`}
+                  >
+                    <p className="font-medium text-white">{s.title}</p>
+                    <p className="text-xs text-drive-muted">
+                      {s.sessionDate} · {s.startTime}–{s.endTime}
+                      {s.venue ? ` · ${s.venue}` : ""}
+                    </p>
+                  </button>
                 </li>
               ))}
             </ul>
-          </UiCard>
-        </div>
+          ) : (
+            <p className="mt-3 text-sm text-drive-muted">Chưa có buổi học sắp tới.</p>
+          )}
+        </UiCard>
+
+        <UiCard variant="panel">
+          {selected ? (
+            <>
+              <p className="text-xs text-drive-muted">{selected.sessionDate}</p>
+              <h2 className="mt-2 font-semibold text-white">{selected.title}</h2>
+              <p className="mt-2 text-sm text-drive-text">
+                {selected.startTime}–{selected.endTime}
+                {selected.sessionType ? ` · ${selected.sessionType}` : ""}
+              </p>
+              {selected.venue ? (
+                <p className="text-xs text-drive-muted">{selected.venue}</p>
+              ) : null}
+              <PrimaryButton
+                variant="action"
+                className="mt-4"
+                disabled={checking}
+                onClick={handleCheckIn}
+              >
+                {checking ? t("common.loading") : t("pages.studyCalendar.checkIn")}
+              </PrimaryButton>
+            </>
+          ) : (
+            <p className="text-sm text-drive-muted">Chọn buổi học để điểm danh.</p>
+          )}
+        </UiCard>
       </div>
     </section>
   )

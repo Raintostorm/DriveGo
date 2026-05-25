@@ -122,10 +122,11 @@ export function AdminApplicationDetailPage() {
         </ul>
       </UiCard>
 
+      {app.status !== "draft" ? (
       <UiCard variant="panel">
-        <h2 className="font-semibold text-white">Yêu cầu nộp hồ sơ</h2>
+        <h2 className="font-semibold text-white">Yêu cầu nộp lại hồ sơ</h2>
         <p className="mt-1 text-sm text-drive-muted">
-          Gửi thông báo cho học viên hoàn thiện hồ sơ trước khi đăng ký ca thi.
+          Dùng khi học viên đã nộp trước đó và cần bổ sung/sửa giấy tờ (từ chối, hết hạn, v.v.).
         </p>
         {app.dossierRequestedAt ? (
           <p className="mt-2 text-sm text-amber-300">
@@ -164,9 +165,17 @@ export function AdminApplicationDetailPage() {
             }
           }}
         >
-          Yêu cầu nộp hồ sơ
+          Yêu cầu nộp lại
         </PrimaryButton>
       </UiCard>
+      ) : (
+        <UiCard variant="panel">
+          <p className="text-sm text-drive-muted">
+            Học viên đang soạn nháp — chưa nộp lần đầu. Không cần &quot;yêu cầu nộp&quot;; chờ HV tự
+            nộp hoặc xem sau khi trạng thái là Đã nộp.
+          </p>
+        </UiCard>
+      )}
 
       <UiCard variant="panel">
         <h2 className="font-semibold text-white">Duyệt hồ sơ</h2>

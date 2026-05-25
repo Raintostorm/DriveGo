@@ -34,4 +34,7 @@ export class StudentProfile {
   /** Các hạng GPLX học viên đang có (A1, B2, …) */
   @Column({ name: "held_licenses", type: "jsonb", default: () => "'[]'" })
   heldLicenses!: string[]
+
+  @Column({ name: "admin_note", type: "text", nullable: true })
+  adminNote?: string | null
 }

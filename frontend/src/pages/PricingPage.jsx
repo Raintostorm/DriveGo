@@ -21,8 +21,15 @@ export function PricingPage() {
   }
 
   useEffect(() => {
-    apiFetch("/plans")
-      .then((data) => setPlans(data.licenseClasses ?? []))
+    Promise.all([apiFetch("/plans"), apiFetch("/license-classes").catch(() => [])])
+      .then(([plansData, catalog]) => {
+        const byCode = new Map((catalog ?? []).map((c) => [c.code, c]))
+        const merged = (plansData.licenseClasses ?? []).map((p) => ({
+          ...p,
+          contentReady: byCode.get(p.code)?.contentReady ?? false,
+        }))
+        setPlans(merged)
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -55,7 +62,18 @@ export function PricingPage() {
                   {t("pages.pricing.popular")}
                 </span>
               ) : null}
-              <h2 className="text-xl font-semibold text-white">Bằng {plan.code}</h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-xl font-semibold text-white">Bằng {plan.code}</h2>
+                {plan.contentReady ? (
+                  <span className="rounded-full bg-drive-success/20 px-2 py-0.5 text-[10px] font-semibold text-drive-success">
+                    Sẵn sàng
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-drive-border px-2 py-0.5 text-[10px] text-drive-muted">
+                    Sắp có
+                  </span>
+                )}
+              </div>
               <p className="mt-2 text-3xl font-bold text-white">
                 {plan.enrollmentFee ?? "5.000đ"}
               </p>

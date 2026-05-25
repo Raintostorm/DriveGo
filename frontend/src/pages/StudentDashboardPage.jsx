@@ -1,27 +1,30 @@
+import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { PageHeader } from "../components/PageHeader.jsx"
 import { PrimaryButton } from "../components/PrimaryButton.jsx"
 import { StatCard } from "../components/StatCard.jsx"
 import { UiCard } from "../components/UiCard.jsx"
 import { useAuth } from "../context/AuthContext.jsx"
+import { apiFetch } from "../lib/api.js"
 import { isPremiumActive } from "../lib/premium.js"
 import { t } from "../lib/strings.js"
 
 export function StudentDashboardPage() {
   const { user } = useAuth()
+  const [summary, setSummary] = useState(null)
   const displayName = user?.profile?.fullName || user?.email?.split("@")[0] || "bạn"
   const premium = isPremiumActive(user)
 
-  const quickStats = [
-    { labelKey: "pages.studentDashboard.statProgress", value: "45%", badge: "+5% tuần này" },
-    { labelKey: "pages.studentDashboard.statSessions", value: "12/30", badge: "+2 bài mới" },
-    { labelKey: "pages.studentDashboard.statScore", value: "8.5/10", badge: "Ổn định" },
-    {
-      labelKey: "pages.studentDashboard.statStatus",
-      value: premium ? "Premium" : "Miễn phí",
-      badge: premium ? "Đang hoạt động" : "Nâng cấp",
-    },
-  ]
+  useEffect(() => {
+    apiFetch("/study/dashboard-summary", { auth: true })
+      .then(setSummary)
+      .catch(() => setSummary(null))
+  }, [])
+
+  const progressPct =
+    summary && summary.chaptersTotal > 0
+      ? Math.round((summary.chaptersCompleted / summary.chaptersTotal) * 100)
+      : 0
 
   return (
     <section>
@@ -29,18 +32,12 @@ export function StudentDashboardPage() {
         title={t("pages.studentDashboard.title")}
         subtitle={`Chào ${displayName}, hôm nay bạn đã sẵn sàng lái xe chưa?`}
         actions={
-          <>
-            <span className="rounded-lg border border-drive-border-soft bg-drive-panel px-4 py-2 text-sm text-drive-text">
-              Thứ 6, 24 Tháng 5
-            </span>
-            <Link
-              to="/notifications"
-              className="relative rounded-lg border border-drive-border-soft bg-drive-panel p-2.5 text-drive-muted hover:text-white"
-            >
-              🔔
-              <span className="absolute right-2 top-2 size-2 rounded-full bg-drive-danger" />
-            </Link>
-          </>
+          <Link
+            to="/notifications"
+            className="relative rounded-lg border border-drive-border-soft bg-drive-panel p-2.5 text-drive-muted hover:text-white"
+          >
+            🔔
+          </Link>
         }
       />
 
@@ -54,50 +51,76 @@ export function StudentDashboardPage() {
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {quickStats.map(({ labelKey, value, badge }) => (
-          <StatCard key={labelKey} label={t(labelKey)} value={value} badge={badge} />
-        ))}
+        <StatCard
+          label={t("pages.studentDashboard.statProgress")}
+          value={summary ? `${progressPct}%` : "—"}
+          badge={
+            summary
+              ? `${summary.chaptersCompleted}/${summary.chaptersTotal} chương`
+              : undefined
+          }
+        />
+        <StatCard
+          label={t("pages.studentDashboard.statSessions")}
+          value={summary ? String(summary.upcomingSessions) : "—"}
+          badge="Buổi sắp tới"
+        />
+        <StatCard
+          label={t("pages.studentDashboard.statScore")}
+          value={
+            summary?.recentAttempts?.[0]?.score != null
+              ? String(summary.recentAttempts[0].score)
+              : "—"
+          }
+          badge="Lần thi gần nhất"
+        />
+        <StatCard
+          label={t("pages.studentDashboard.statStatus")}
+          value={premium ? "Premium" : "Miễn phí"}
+          badge={premium ? "Đang hoạt động" : "Nâng cấp"}
+        />
       </div>
 
       <div className="mt-8 grid gap-4 lg:grid-cols-[2fr_1fr]">
         <UiCard variant="panel" as="article" padding="lg">
-          <p className="text-xs font-medium text-drive-action">{t("pages.studentDashboard.currentLesson")}</p>
-          <h2 className="mt-2 text-2xl font-semibold text-white">Chương 3: Biển báo hiệu đường bộ</h2>
+          <p className="text-xs font-medium text-drive-action">
+            {t("pages.studentDashboard.currentLesson")}
+          </p>
+          <h2 className="mt-2 text-2xl font-semibold text-white">
+            Hạng {summary?.licenseClass ?? user?.profile?.licenseClass ?? "B2"}
+          </h2>
           <div className="mt-6 rounded-drive border border-drive-border-soft bg-drive-sidebar p-4">
             <div className="h-2.5 overflow-hidden rounded-full bg-drive-elevated">
-              <div className="h-full w-[45%] rounded-full bg-drive-action shadow-drive-action" />
+              <div
+                className="h-full rounded-full bg-drive-action shadow-drive-action"
+                style={{ width: `${progressPct}%` }}
+              />
             </div>
-            <p className="mt-3 text-xs text-drive-muted">Tiến độ: 12/25 bài học</p>
+            <p className="mt-3 text-xs text-drive-muted">
+              Tiến độ lý thuyết: {summary?.chaptersCompleted ?? 0}/
+              {summary?.chaptersTotal ?? 0} chương
+            </p>
           </div>
-          <PrimaryButton variant="action" className="mt-6">
-            {t("pages.studentDashboard.continue")}
-          </PrimaryButton>
+          <Link to="/theory">
+            <PrimaryButton variant="action" className="mt-6">
+              {t("pages.studentDashboard.continue")}
+            </PrimaryButton>
+          </Link>
         </UiCard>
         <UiCard variant="panel" as="article">
-          <h3 className="font-semibold text-white">{t("pages.studentDashboard.reviewTips")}</h3>
-          <ul className="mt-3 space-y-2 text-sm text-drive-muted">
-            <li>• Quy tắc giao thông cơ bản</li>
-            <li>• Biển báo nguy hiểm</li>
-            <li>• Ưu tiên đường bộ</li>
-          </ul>
+          <h3 className="font-semibold text-white">Lịch học</h3>
+          <p className="mt-2 text-sm text-drive-muted">
+            {summary?.upcomingSessions
+              ? `${summary.upcomingSessions} buổi sắp tới`
+              : "Chưa có buổi học"}
+          </p>
+          <Link
+            to="/study-calendar"
+            className="mt-4 inline-block text-sm text-drive-action hover:underline"
+          >
+            Xem lịch & điểm danh →
+          </Link>
         </UiCard>
-      </div>
-
-      <div className="mt-8 grid gap-4 md:grid-cols-3">
-        {["Đề thi mô phỏng", "Ôn tập 60 câu", "Thi thử tổng hợp"].map((title) => (
-          <UiCard key={title} variant="panel" className="flex flex-col justify-between">
-            <div>
-              <div className="mb-3 flex size-10 items-center justify-center rounded-lg border border-drive-border-soft bg-drive-sidebar text-drive-action">
-                ◆
-              </div>
-              <h3 className="font-semibold text-white">{title}</h3>
-              <p className="mt-1 text-sm text-drive-muted">Luyện tập theo chuẩn Bộ GTVT</p>
-            </div>
-            <Link to="/exam" className="mt-4 text-sm font-medium text-drive-action hover:underline">
-              {t("common.viewDetail")}
-            </Link>
-          </UiCard>
-        ))}
       </div>
     </section>
   )
