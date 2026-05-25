@@ -1,0 +1,13 @@
+pdf=Bộ 600 câu hỏi dành cho sát hạch lái xe cơ giới đường bộ.pdf
+parsed=599
+missing=[507]
+images=290
+#1 -> 2: Phần đường xe chạy.
+#5 -> 2: Là vạch chỉ sự phân chia làn đường, vị trí hoặc hư
+#12 -> 3: Cả hai ý trên.
+#100 -> 3: Dừng lại về bên phải đường của mình, trước vạch dừ
+#439 -> 2: Biển 2.
+#541 -> 1: Xe A.
+#600 -> 2: Giảm tốc độ chờ xe container rẽ xong rồi tiếp tục 
+
+Note: PDF gốc thiếu Câu 507 (nhảy 506 -> 508).

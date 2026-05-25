@@ -19,6 +19,11 @@
     "migrate:applications": "node database/scripts/run-migration.mjs database/migrations/001_applications.sql",
     "migrate:videos": "node database/scripts/run-migration.mjs database/migrations/003_fix_chapter_videos.sql",
     "migrate:profile": "node database/scripts/run-migration.mjs database/migrations/004_held_licenses.sql",
+    "migrate:articles": "node database/scripts/run-migration.mjs database/migrations/005_article_license_class.sql",
+    "migrate:admin": "node database/scripts/run-migration.mjs database/migrations/006_admin_workflow.sql",
+    "migrate:enrollment": "node database/scripts/run-migration.mjs database/migrations/007_enrollment_and_dossier_request.sql",
+    "import:content": "node database/scripts/import-license-content.mjs",
+    "parse:b2-pdf": "python database/scripts/parse-b2-pdf.py",
     "setup:env": "node scripts/setup-env.mjs"
   },
   "devDependencies": {

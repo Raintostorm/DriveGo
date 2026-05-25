@@ -28,6 +28,12 @@ export class Payment {
   @JoinColumn({ name: "plan_id" })
   plan?: SubscriptionPlan | null
 
+  @Column({ name: "payment_type", type: "varchar", length: 32, default: "premium" })
+  paymentType!: string
+
+  @Column({ name: "license_class", type: "varchar", length: 16, nullable: true })
+  licenseClass?: string | null
+
   @Column({ type: "numeric", precision: 12, scale: 2 })
   amount!: string
 

@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
+import { EnrollCourseCta } from "../components/EnrollCourseCta.jsx"
 import { EnrollmentConsentCard } from "../components/EnrollmentConsentCard.jsx"
+import { LicenseContentEmpty } from "../components/LicenseContentEmpty.jsx"
 import { PrimaryButton } from "../components/PrimaryButton.jsx"
 import { UiCard } from "../components/UiCard.jsx"
+import { useLicense } from "../context/LicenseContext.jsx"
 import { apiFetch } from "../lib/api.js"
 import { t } from "../lib/strings.js"
 
@@ -16,8 +19,11 @@ function formatTime(seconds) {
 
 export function ExamPage() {
   const navigate = useNavigate()
+  const { activeClass, isEnrolled, enrollmentsLoading } = useLicense()
+  const enrolled = isEnrolled(activeClass)
   const [paper, setPaper] = useState(null)
   const [papers, setPapers] = useState([])
+  const [examContentReady, setExamContentReady] = useState(false)
   const [selectedPaperId, setSelectedPaperId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -28,34 +34,17 @@ export function ExamPage() {
   const [result, setResult] = useState(null)
   const [startedAt] = useState(() => new Date().toISOString())
   const [secondsLeft, setSecondsLeft] = useState(EXAM_MINUTES * 60)
-  const [examEligible, setExamEligible] = useState(null)
-  const [eligibilityLoading, setEligibilityLoading] = useState(true)
-
   useEffect(() => {
+    if (!enrolled) return undefined
     let cancelled = false
-    apiFetch("/applications/me", { auth: true })
+    apiFetch(`/exams/papers?licenseClass=${activeClass}`, { auth: true })
       .then((data) => {
-        if (!cancelled) setExamEligible(Boolean(data?.examEligible))
-      })
-      .catch(() => {
-        if (!cancelled) setExamEligible(false)
-      })
-      .finally(() => {
-        if (!cancelled) setEligibilityLoading(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!examEligible) return undefined
-    let cancelled = false
-    apiFetch("/exams/papers?licenseClass=B2")
-      .then((list) => {
         if (!cancelled) {
+          const list = data.papers ?? (Array.isArray(data) ? data : [])
           setPapers(list)
+          setExamContentReady(Boolean(data.contentReady ?? list.length > 0))
           if (list[0]) setSelectedPaperId(list[0].id)
+          else setSelectedPaperId(null)
         }
       })
       .catch((err) => {
@@ -64,13 +53,13 @@ export function ExamPage() {
     return () => {
       cancelled = true
     }
-  }, [examEligible])
+  }, [enrolled, activeClass])
 
   useEffect(() => {
-    if (!examEligible || !selectedPaperId) return undefined
+    if (!enrolled || !selectedPaperId) return undefined
     let cancelled = false
     setLoading(true)
-    apiFetch(`/exams/${selectedPaperId}`)
+    apiFetch(`/exams/${selectedPaperId}`, { auth: true })
       .then((detail) => {
         if (!cancelled) {
           setPaper(detail)
@@ -90,7 +79,7 @@ export function ExamPage() {
     return () => {
       cancelled = true
     }
-  }, [selectedPaperId, examEligible])
+  }, [selectedPaperId, enrolled, activeClass])
 
   useEffect(() => {
     if (!paper || result) return undefined
@@ -147,25 +136,22 @@ export function ExamPage() {
     }
   }
 
-  if (eligibilityLoading) return <p className="text-drive-muted">Đang kiểm tra hồ sơ…</p>
+  if (enrollmentsLoading) return <p className="text-drive-muted">Đang kiểm tra đăng ký khóa…</p>
 
-  if (!examEligible) {
+  if (!enrolled) {
+    return <EnrollCourseCta licenseClass={activeClass} />
+  }
+
+  if (!examContentReady) {
     return (
-      <UiCard variant="panel" className="mx-auto max-w-lg text-center">
-        <h1 className="text-xl font-bold text-white">Cần nộp hồ sơ sát hạch</h1>
-        <p className="mt-3 text-sm text-drive-muted">
-          Để ôn thi và làm bài thi thử, bạn phải nộp đủ giấy tờ (ảnh 3×4, CCCD, VNeID…) theo quy
-          định mới nhất.
-        </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <Link to="/application">
-            <PrimaryButton variant="action">Nộp hồ sơ ngay</PrimaryButton>
-          </Link>
-          <Link to="/profile">
-            <PrimaryButton variant="outline">Xem hồ sơ cá nhân</PrimaryButton>
-          </Link>
-        </div>
-      </UiCard>
+      <EnrollmentConsentCard
+        storageKey="drivego_consent_exam_v1"
+        title={t("consent.examTitle")}
+        bullets={[t("consent.examBullet1"), t("consent.examBullet2")]}
+        confirmLabel={t("consent.examConfirm")}
+      >
+        <LicenseContentEmpty feature="exam" />
+      </EnrollmentConsentCard>
     )
   }
 
@@ -174,9 +160,9 @@ export function ExamPage() {
     return (
       <p className="text-drive-danger">
         {error}{" "}
-        {error.includes("hồ sơ") ? (
-          <Link to="/application" className="font-medium text-drive-action underline">
-            Nộp hồ sơ
+        {error.includes("đăng ký") ? (
+          <Link to={`/enroll?class=${activeClass}`} className="font-medium text-drive-action underline">
+            Đăng ký khóa
           </Link>
         ) : null}
       </p>
@@ -249,7 +235,7 @@ export function ExamPage() {
           <img src={question.imageUrl} alt="" className="h-56 w-full rounded-drive object-cover" />
         ) : (
           <div className="flex h-56 items-center justify-center rounded-drive bg-gradient-to-r from-drive-panel to-drive-action/25 text-sm text-drive-muted">
-            Câu hỏi lý thuyết B2
+            {t("license.examQuestionLabel", { code: activeClass })}
           </div>
         )}
 
@@ -370,7 +356,7 @@ export function ExamPage() {
           </div>
         </UiCard>
         <UiCard variant="panel" className="text-sm text-drive-muted">
-          <p>{questions.length} câu — thi thử B2</p>
+          <p>{t("license.examAside", { count: String(questions.length), code: activeClass })}</p>
           <Link to="/theory" className="mt-2 inline-block text-drive-action hover:underline">
             Ôn lý thuyết trước khi thi
           </Link>

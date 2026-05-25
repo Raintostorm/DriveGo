@@ -171,6 +171,7 @@ export function UpgradePage() {
         method: "POST",
         auth: true,
         body: JSON.stringify({
+          paymentType: "premium",
           planCode: "premium",
           fullName: fullName.trim(),
           email: email.trim(),

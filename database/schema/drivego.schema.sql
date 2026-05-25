@@ -116,6 +116,7 @@ CREATE TABLE IF NOT EXISTS document_articles (
   title VARCHAR(255) NOT NULL,
   body TEXT,
   category VARCHAR(64),
+  license_class VARCHAR(16),
   pdf_url TEXT,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

@@ -1,8 +1,16 @@
-import { IsEmail, IsOptional, IsString } from "class-validator"
+import { IsEmail, IsIn, IsOptional, IsString } from "class-validator"
 
 export class CheckoutDto {
+  @IsIn(["premium", "enrollment"])
+  paymentType!: "premium" | "enrollment"
+
+  @IsOptional()
   @IsString()
-  planCode!: string
+  planCode?: string
+
+  @IsOptional()
+  @IsString()
+  licenseClass?: string
 
   @IsOptional()
   @IsString()

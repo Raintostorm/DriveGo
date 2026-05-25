@@ -15,36 +15,42 @@ export const DEMO_ARTICLES = [
     title: "Cấu trúc đề thi và hướng dẫn học 600 câu hỏi lý thuyết 2024",
     body: "Câu hỏi điểm liệt — sai một câu là trượt ngay. Nắm vững biển báo, quy tắc ưu tiên và dùng tính năng thi thử DriveGo mỗi ngày.",
     category: "ly-thuyet",
+    licenseClass: null,
   },
   {
     slug: "cau-diem-liet-b2",
     title: "Danh sách câu điểm liệt hạng B2 cần nhớ",
     body: "Tập trung 60 câu điểm liệt: vượt đèn đỏ, không nhường đường, sai làn đường cao tốc. In checklist và ôn 10 phút/ngày.",
     category: "ly-thuyet",
+    licenseClass: "B2",
   },
   {
     slug: "quy-trinh-dang-ky-sat-hach",
     title: "Quy trình đăng ký thi sát hạch trực tuyến",
     body: "Bước 1: Chọn hạng bằng. Bước 2: Chọn ca thi trên DriveGo. Bước 3: Thanh toán phí (nếu có). Bước 4: Nhận thông báo xác nhận qua app.",
     category: "quy-trinh",
+    licenseClass: null,
   },
   {
     slug: "meo-thi-sa-hinh",
     title: "Mẹo thi sa hình và mô phỏng 120 tình huống",
     body: "Quan sát góc camera, nhận diện nguy hiểm sớm, bấm phanh khi tốc độ vượt ngưỡng. Luyện 5 đề/ngày trước thi 1 tuần.",
     category: "mo-phong",
+    licenseClass: "B2",
   },
   {
     slug: "cap-nhat-de-thi-2024",
     title: "Cập nhật bộ đề thi mới nhất từ Bộ GTVT",
     body: "DriveGo đã đồng bộ 600 câu hỏi và bộ đề thi thử B2. Học viên Premium được thi không giới hạn và xem giải thích chi tiết.",
     category: "tin-tuc",
+    licenseClass: "B2",
   },
   {
     slug: "huong-dan-app-drivego",
     title: "Hướng dẫn sử dụng app DriveGo cho người mới",
     body: "Đăng ký tài khoản → Chọn hạng B2 → Học video lý thuyết → Thi thử → Đăng ký lịch sát hạch → Tra cứu kết quả.",
     category: "huong-dan",
+    licenseClass: null,
   },
 ]
 

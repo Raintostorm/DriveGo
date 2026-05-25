@@ -45,6 +45,21 @@ export class LicenseApplication {
   @Column({ name: "submitted_at", type: "timestamptz", nullable: true })
   submittedAt?: Date | null
 
+  @Column({ name: "admin_note", type: "text", nullable: true })
+  adminNote?: string | null
+
+  @Column({ name: "reviewed_at", type: "timestamptz", nullable: true })
+  reviewedAt?: Date | null
+
+  @Column({ name: "reviewed_by", type: "uuid", nullable: true })
+  reviewedBy?: string | null
+
+  @Column({ name: "dossier_requested_at", type: "timestamptz", nullable: true })
+  dossierRequestedAt?: Date | null
+
+  @Column({ name: "dossier_deadline", type: "timestamptz", nullable: true })
+  dossierDeadline?: Date | null
+
   @CreateDateColumn({ name: "created_at", type: "timestamptz" })
   createdAt!: Date
 

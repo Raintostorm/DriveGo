@@ -10,19 +10,24 @@ export class ArticlesService {
     private readonly repo: Repository<DocumentArticle>,
   ) {}
 
-  async search(search?: string) {
-    const where = search
-      ? [
-          { title: ILike(`%${search}%`) },
-          { body: ILike(`%${search}%`) },
-          { category: ILike(`%${search}%`) },
-        ]
-      : undefined
+  async search(search?: string, licenseClass?: string) {
+    const qb = this.repo.createQueryBuilder("a").orderBy("a.updated_at", "DESC")
 
-    const rows = await this.repo.find({
-      where,
-      order: { updatedAt: "DESC" },
-    })
+    if (licenseClass) {
+      qb.andWhere("(a.license_class IS NULL OR a.license_class = :licenseClass)", {
+        licenseClass,
+      })
+    }
+
+    if (search?.trim()) {
+      const q = `%${search.trim()}%`
+      qb.andWhere(
+        "(a.title ILIKE :q OR a.body ILIKE :q OR a.category ILIKE :q)",
+        { q },
+      )
+    }
+
+    const rows = await qb.getMany()
 
     return rows.map((a) => ({
       id: a.id,
@@ -30,6 +35,7 @@ export class ArticlesService {
       title: a.title,
       body: a.body,
       category: a.category,
+      licenseClass: a.licenseClass ?? null,
       updatedAt: a.updatedAt,
     }))
   }

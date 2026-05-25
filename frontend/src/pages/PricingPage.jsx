@@ -1,12 +1,24 @@
 import { useEffect, useState } from "react"
+import { Link, useNavigate } from "react-router-dom"
+import { useAuth } from "../context/AuthContext.jsx"
 import { PrimaryButton } from "../components/PrimaryButton.jsx"
 import { UiCard } from "../components/UiCard.jsx"
 import { apiFetch } from "../lib/api.js"
 import { t } from "../lib/strings.js"
 
 export function PricingPage() {
+  const { isAuthenticated } = useAuth()
+  const navigate = useNavigate()
   const [plans, setPlans] = useState([])
   const [loading, setLoading] = useState(true)
+
+  function handleEnroll(code) {
+    if (!isAuthenticated) {
+      navigate(`/register?class=${encodeURIComponent(code)}`)
+      return
+    }
+    navigate(`/enroll?class=${encodeURIComponent(code)}`)
+  }
 
   useEffect(() => {
     apiFetch("/plans")
@@ -44,7 +56,13 @@ export function PricingPage() {
                 </span>
               ) : null}
               <h2 className="text-xl font-semibold text-white">Bằng {plan.code}</h2>
-              <p className="mt-2 text-3xl font-bold text-white">{plan.price}</p>
+              <p className="mt-2 text-3xl font-bold text-white">
+                {plan.enrollmentFee ?? "5.000đ"}
+              </p>
+              <p className="text-xs text-drive-muted">Phí đăng ký khóa (thử SePay)</p>
+              <p className="mt-1 text-sm text-drive-muted line-through opacity-60">
+                Giá tham khảo: {plan.price}
+              </p>
               <p className="mt-1 text-xs text-drive-muted">{plan.description}</p>
               <ul className="mt-4 space-y-2 text-sm text-drive-muted">
                 {plan.features.map((f) => (
@@ -53,9 +71,17 @@ export function PricingPage() {
                   </li>
                 ))}
               </ul>
-              <PrimaryButton variant="action" fullWidth className="mt-6">
-                {t("common.registerNow")}
-              </PrimaryButton>
+              <div className="mt-6 space-y-2">
+                <PrimaryButton variant="action" fullWidth onClick={() => handleEnroll(plan.code)}>
+                  Đăng ký & thanh toán
+                </PrimaryButton>
+                <Link
+                  to={`/register?class=${encodeURIComponent(plan.code)}`}
+                  className="block text-center text-xs text-drive-action hover:underline"
+                >
+                  {t("common.registerNow")}
+                </Link>
+              </div>
             </UiCard>
           ))}
         </div>

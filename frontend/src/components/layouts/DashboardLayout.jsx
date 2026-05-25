@@ -2,6 +2,7 @@ import { useMemo } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { BrandLogo } from "../BrandLogo.jsx"
 import { PrimaryButton } from "../PrimaryButton.jsx"
+import { LicenseClassSwitcher } from "../LicenseClassSwitcher.jsx"
 import { SidebarNav } from "../SidebarNav.jsx"
 import { useAuth } from "../../context/AuthContext.jsx"
 import { formatPremiumDate, isPremiumActive } from "../../lib/premium.js"
@@ -23,7 +24,9 @@ const studentNav = [
 
 const adminNav = [
   { to: "/admin-dashboard", labelKey: "nav.adminDashboard" },
-  { to: "/center-register", labelKey: "nav.centerRegister" },
+  { to: "/admin/students", labelKey: "nav.adminStudents" },
+  { to: "/admin/applications", labelKey: "nav.adminApplications" },
+  { to: "/admin/schedules", labelKey: "nav.adminSchedules" },
 ]
 
 /**
@@ -57,25 +60,32 @@ export function DashboardLayout({ children, variant = "student" }) {
           <BrandLogo size="sm" />
         </Link>
         <SidebarNav items={items} />
+        {variant === "student" ? (
+          <div className="mt-4">
+            <LicenseClassSwitcher />
+          </div>
+        ) : null}
         <div className="mt-6 space-y-2 px-3">
-          {premium ? (
-            <Link
-              to="/upgrade"
-              className="block rounded-drive border border-drive-success/40 bg-drive-success/10 px-3 py-2.5 text-center transition hover:bg-drive-success/15"
-            >
-              <span className="text-sm font-semibold text-drive-success">★ Premium</span>
-              <span className="mt-0.5 block text-xs text-drive-muted">
-                {t("pages.upgrade.validUntil")}{" "}
-                {formatPremiumDate(user?.profile?.premiumUntil)}
-              </span>
-            </Link>
-          ) : (
-            <Link to="/upgrade">
-              <PrimaryButton variant="action" fullWidth>
-                {t("nav.upgrade")} Premium
-              </PrimaryButton>
-            </Link>
-          )}
+          {variant === "student" ? (
+            premium ? (
+              <Link
+                to="/upgrade"
+                className="block rounded-drive border border-drive-success/40 bg-drive-success/10 px-3 py-2.5 text-center transition hover:bg-drive-success/15"
+              >
+                <span className="text-sm font-semibold text-drive-success">★ Premium</span>
+                <span className="mt-0.5 block text-xs text-drive-muted">
+                  {t("pages.upgrade.validUntil")}{" "}
+                  {formatPremiumDate(user?.profile?.premiumUntil)}
+                </span>
+              </Link>
+            ) : (
+              <Link to="/upgrade">
+                <PrimaryButton variant="action" fullWidth>
+                  {t("nav.upgrade")} Premium
+                </PrimaryButton>
+              </Link>
+            )
+          ) : null}
           {user ? (
             <p className="truncate px-1 text-xs text-drive-muted" title={user.email}>
               {user.profile?.fullName || user.email}

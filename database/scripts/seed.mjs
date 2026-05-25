@@ -27,6 +27,8 @@ const ID = {
   userAdmin: "22222222-2222-4222-8222-222222222203",
   licenseB2: "33333333-3333-4333-8333-333333333301",
   licenseA1: "33333333-3333-4333-8333-333333333302",
+  licenseA2: "33333333-3333-4333-8333-333333333303",
+  licenseB1: "33333333-3333-4333-8333-333333333304",
   chapter1: "44444444-4444-4444-8444-444444444401",
   chapter2: "44444444-4444-4444-8444-444444444402",
   chapter3: "44444444-4444-4444-8444-444444444403",
@@ -47,7 +49,9 @@ const ID = {
   slot2: "77777777-7777-4777-8777-777777777702",
   slot3: "77777777-7777-4777-8777-777777777703",
   slot4: "77777777-7777-4777-8777-777777777704",
-  slot5: "77777777-7777-4777-8777-777777777705",
+  slotRoad1: "77777777-7777-4777-8777-777777777705",
+  slotRoad2: "77777777-7777-4777-8777-777777777706",
+  slot5: "77777777-7777-4777-8777-777777777707",
   planFree: "88888888-8888-4888-8888-888888888801",
   planPremium: "88888888-8888-4888-8888-888888888802",
   article1: "99999999-9999-4999-8999-999999999901",
@@ -63,7 +67,7 @@ const ID = {
 
 const PAPER_IDS = [ID.paper1, ID.paper2]
 const CHAPTER_IDS = [ID.chapter1, ID.chapter2, ID.chapter3, ID.chapter4]
-const SLOT_IDS = [ID.slot1, ID.slot2, ID.slot3, ID.slot4, ID.slot5]
+const SLOT_IDS = [ID.slot1, ID.slot2, ID.slot3, ID.slot4, ID.slot5, ID.slotRoad1, ID.slotRoad2]
 const ARTICLE_IDS = [ID.article1, ID.article2, ID.article3, ID.article4, ID.article5, ID.article6]
 const LOOKUP_CODE_LIST = LOOKUP_CODES.map((r) => r.code)
 
@@ -106,12 +110,24 @@ async function seed() {
   )
 
   await client.query(
-    `INSERT INTO users (id, email, password_hash, role) VALUES
-     ($1, $2, $3, 'student'),
-     ($4, $5, $3, 'center_admin'),
-     ($6, $7, $3, 'system_admin')
-     ON CONFLICT (email) DO UPDATE SET password_hash = EXCLUDED.password_hash, role = EXCLUDED.role`,
-    [ID.userStudent, DEMO_EMAILS[0], passwordHash, ID.userCenter, DEMO_EMAILS[1], ID.userAdmin, DEMO_EMAILS[2]],
+    `INSERT INTO users (id, email, password_hash, role, center_id) VALUES
+     ($1, $2, $3, 'student', $8),
+     ($4, $5, $3, 'center_admin', $8),
+     ($6, $7, $3, 'system_admin', NULL)
+     ON CONFLICT (email) DO UPDATE SET
+       password_hash = EXCLUDED.password_hash,
+       role = EXCLUDED.role,
+       center_id = EXCLUDED.center_id`,
+    [
+      ID.userStudent,
+      DEMO_EMAILS[0],
+      passwordHash,
+      ID.userCenter,
+      DEMO_EMAILS[1],
+      ID.userAdmin,
+      DEMO_EMAILS[2],
+      ID.center,
+    ],
   )
 
   await client.query(
@@ -125,13 +141,16 @@ async function seed() {
   )
 
   await client.query(
-    `INSERT INTO license_classes (id, code, price, description) VALUES
-     ($1, 'A1', 799000, 'Bằng A1 — xe máy'),
-     ($2, 'A2', 1500000, 'Bằng A2'),
-     (gen_random_uuid(), 'B1', 12000000, 'Bằng B1'),
-     (gen_random_uuid(), 'B2', 15000000, 'Bằng B2 — phổ biến nhất')
-     ON CONFLICT (code) DO UPDATE SET price = EXCLUDED.price, description = EXCLUDED.description`,
-    [ID.licenseA1, ID.licenseB2],
+    `INSERT INTO license_classes (id, code, price, enrollment_fee, description) VALUES
+     ($1, 'A1', 799000, 5000, 'Bằng A1 — xe máy'),
+     ($2, 'A2', 1500000, 5000, 'Bằng A2'),
+     ($3, 'B1', 12000000, 5000, 'Bằng B1'),
+     ($4, 'B2', 15000000, 5000, 'Bằng B2 — phổ biến nhất')
+     ON CONFLICT (code) DO UPDATE SET
+       price = EXCLUDED.price,
+       enrollment_fee = EXCLUDED.enrollment_fee,
+       description = EXCLUDED.description`,
+    [ID.licenseA1, ID.licenseA2, ID.licenseB1, ID.licenseB2],
   )
 
   const b2Row = await client.query(`SELECT id FROM license_classes WHERE code = 'B2' LIMIT 1`)
@@ -184,16 +203,30 @@ async function seed() {
   )
 
   await client.query(
-    `INSERT INTO schedule_slots (id, center_id, slot_date, start_time, end_time, venue, license_class, capacity, registered_count) VALUES
-     ($1, $6, CURRENT_DATE + 7, '08:00', '11:30', 'Sân sát hạch Củ Chi', 'B2', 40, 12),
-     ($2, $6, CURRENT_DATE + 7, '13:30', '17:00', 'Sân sát hạch Củ Chi', 'B2', 40, 28),
-     ($3, $6, CURRENT_DATE + 14, '08:00', '11:30', 'Sân sát hạch Củ Chi', 'B2', 40, 5),
-     ($4, $6, CURRENT_DATE + 14, '13:30', '17:00', 'Sân sát hạch Củ Chi', 'B2', 40, 35),
-     ($5, $6, CURRENT_DATE + 21, '08:00', '11:30', 'Sân sát hạch Củ Chi', 'B1', 30, 30)
-     ON CONFLICT (id) DO UPDATE SET registered_count = EXCLUDED.registered_count`,
-    [ID.slot1, ID.slot2, ID.slot3, ID.slot4, ID.slot5, ID.center],
+    `INSERT INTO schedule_slots (id, center_id, slot_date, start_time, end_time, venue, license_class, capacity, registered_count, slot_type) VALUES
+     ($1, $8, CURRENT_DATE + 7, '08:00', '11:30', 'Sân sát hạch Củ Chi', 'B2', 40, 12, 'theory_exam'),
+     ($2, $8, CURRENT_DATE + 7, '13:30', '17:00', 'Sân sát hạch Củ Chi', 'B2', 40, 28, 'theory_exam'),
+     ($3, $8, CURRENT_DATE + 14, '08:00', '11:30', 'Sân sát hạch Củ Chi', 'B2', 40, 5, 'theory_exam'),
+     ($4, $8, CURRENT_DATE + 14, '13:30', '17:00', 'Sân sát hạch Củ Chi', 'B2', 40, 35, 'theory_exam'),
+     ($5, $8, CURRENT_DATE + 21, '08:00', '11:30', 'Sân sát hạch Củ Chi', 'B1', 30, 30, 'theory_exam'),
+     ($6, $8, CURRENT_DATE + 10, '07:00', '10:00', 'Sân chạy thử Củ Chi', 'B2', 20, 3, 'road_test'),
+     ($7, $8, CURRENT_DATE + 17, '14:00', '17:00', 'Sân chạy thử Củ Chi', 'B2', 20, 0, 'road_test')
+     ON CONFLICT (id) DO UPDATE SET
+       registered_count = EXCLUDED.registered_count,
+       slot_type = EXCLUDED.slot_type`,
+    [
+      ID.slot1,
+      ID.slot2,
+      ID.slot3,
+      ID.slot4,
+      ID.slot5,
+      ID.slotRoad1,
+      ID.slotRoad2,
+      ID.center,
+    ],
   )
 
+  await client.query(`DELETE FROM exam_registrations WHERE user_id = $1`, [ID.userStudent])
   await client.query(
     `INSERT INTO exam_registrations (user_id, slot_id, status) VALUES ($1, $2, 'confirmed')`,
     [ID.userStudent, ID.slot1],
@@ -210,10 +243,18 @@ async function seed() {
   for (let i = 0; i < DEMO_ARTICLES.length; i++) {
     const a = DEMO_ARTICLES[i]
     await client.query(
-      `INSERT INTO document_articles (id, slug, title, body, category, updated_at) VALUES
-       ($1, $2, $3, $4, $5, NOW() - ($6 || ' days')::interval)
-       ON CONFLICT (slug) DO UPDATE SET title = EXCLUDED.title, body = EXCLUDED.body`,
-      [ARTICLE_IDS[i], a.slug, a.title, a.body, a.category, String(i)],
+      `INSERT INTO document_articles (id, slug, title, body, category, license_class, updated_at) VALUES
+       ($1, $2, $3, $4, $5, $6, NOW() - ($7 || ' days')::interval)
+       ON CONFLICT (slug) DO UPDATE SET title = EXCLUDED.title, body = EXCLUDED.body, license_class = EXCLUDED.license_class`,
+      [
+        ARTICLE_IDS[i],
+        a.slug,
+        a.title,
+        a.body,
+        a.category,
+        a.licenseClass ?? null,
+        String(i),
+      ],
     )
   }
 

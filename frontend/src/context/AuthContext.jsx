@@ -64,6 +64,7 @@ export function AuthProvider({ children }) {
         password: payload.password,
         fullName: payload.fullName,
         phone: payload.phone,
+        licenseClass: payload.licenseClass,
       }),
     })
     setAuthToken(data.accessToken)

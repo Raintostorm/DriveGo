@@ -17,6 +17,9 @@ export class DocumentArticle {
   @Column({ type: "varchar", length: 64, nullable: true })
   category?: string | null
 
+  @Column({ name: "license_class", type: "varchar", length: 16, nullable: true })
+  licenseClass?: string | null
+
   @Column({ name: "pdf_url", type: "text", nullable: true })
   pdfUrl?: string | null
 

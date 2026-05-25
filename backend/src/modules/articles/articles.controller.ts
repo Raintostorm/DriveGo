@@ -6,8 +6,8 @@ export class ArticlesController {
   constructor(private readonly service: ArticlesService) {}
 
   @Get()
-  search(@Query("search") search?: string) {
-    return this.service.search(search)
+  search(@Query("search") search?: string, @Query("licenseClass") licenseClass?: string) {
+    return this.service.search(search, licenseClass)
   }
 
   @Get(":slug")

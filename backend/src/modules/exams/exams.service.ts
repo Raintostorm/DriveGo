@@ -1,8 +1,12 @@
 import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common"
+import {
+  DEFAULT_LICENSE_CLASS,
+  isStudyLicenseCode,
+} from "../../common/license-class.constants"
 import { InjectRepository } from "@nestjs/typeorm"
 import { Repository } from "typeorm"
+import { EnrollmentService } from "../../common/enrollment.service"
 import { PremiumService } from "../../common/premium.service"
-import { ApplicationsService } from "../applications/applications.service"
 import { ExamAttempt } from "../../entities/exam-attempt.entity"
 import { ExamPaper } from "../../entities/exam-paper.entity"
 import { Question } from "../../entities/question.entity"
@@ -18,16 +22,19 @@ export class ExamsService {
     @InjectRepository(ExamAttempt)
     private readonly attemptsRepo: Repository<ExamAttempt>,
     private readonly premium: PremiumService,
-    private readonly applications: ApplicationsService,
+    private readonly enrollment: EnrollmentService,
   ) {}
 
-  async listPapers(licenseClass = "B2") {
+  async listPapers(userId: string, licenseClass?: string) {
+    const code = licenseClass && isStudyLicenseCode(licenseClass) ? licenseClass : DEFAULT_LICENSE_CLASS
+    await this.enrollment.assertEnrolled(userId, code)
+
     const papers = await this.papersRepo.find({
-      where: { licenseClass },
+      where: { licenseClass: code },
       order: { paperNumber: "ASC" },
     })
 
-    return papers.map((paper) => ({
+    const mapped = papers.map((paper) => ({
       id: paper.id,
       licenseClass: paper.licenseClass,
       paperNumber: paper.paperNumber,
@@ -35,22 +42,21 @@ export class ExamsService {
       isMock: paper.isMock,
       title: `Đề thi số ${String(paper.paperNumber).padStart(2, "0")}`,
     }))
+
+    return {
+      licenseClass: code,
+      contentReady: mapped.length > 0,
+      papers: mapped,
+    }
   }
 
-  async getPaper(paperId: string, userId?: string) {
-    if (userId) {
-      const eligible = await this.applications.hasSubmittedApplication(userId)
-      if (!eligible) {
-        throw new ForbiddenException(
-          "Cần nộp hồ sơ sát hạch trước khi làm bài thi thử.",
-        )
-      }
-    }
-
+  async getPaper(paperId: string, userId: string) {
     const paper = await this.papersRepo.findOne({ where: { id: paperId } })
     if (!paper) {
       throw new NotFoundException("Không tìm thấy đề thi")
     }
+
+    await this.enrollment.assertEnrolled(userId, paper.licenseClass)
 
     const questions = await this.questionsRepo.find({
       where: { paperId },
@@ -77,13 +83,13 @@ export class ExamsService {
   }
 
   async submitAttempt(userId: string, paperId: string, dto: SubmitAttemptDto) {
-    await this.applications.assertSubmittedForExam(userId)
-    await this.premium.assertCanSubmitExam(userId)
-
     const paper = await this.papersRepo.findOne({ where: { id: paperId } })
     if (!paper) {
       throw new NotFoundException("Không tìm thấy đề thi")
     }
+
+    await this.enrollment.assertEnrolled(userId, paper.licenseClass)
+    await this.premium.assertCanSubmitExam(userId)
 
     const questions = await this.questionsRepo.find({ where: { paperId } })
     if (questions.length === 0) {

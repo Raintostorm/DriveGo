@@ -21,6 +21,9 @@ export class User {
   @Column({ type: "varchar", length: 32 })
   role!: string
 
+  @Column({ name: "center_id", type: "uuid", nullable: true })
+  centerId?: string | null
+
   @CreateDateColumn({ name: "created_at", type: "timestamptz" })
   createdAt!: Date
 

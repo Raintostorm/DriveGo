@@ -1,6 +1,13 @@
 # Domain spec suy ra tu UI DriveGo (phase FE)
 
-Tai lieu nay duoc rut ra tu cac man hinh React hien tai. **Chua co API/DB trong repo** — dung lam blueprint cho phase backend.
+Tai lieu nay duoc rut ra tu cac man hinh React hien tai. Cap nhat theo API/DB hien co.
+
+### Hạng GPLX (học / thi)
+
+- Catalog: `GET /api/license-classes` — `contentStatus`: `ready` | `coming_soon` (derive từ chapters + exam papers).
+- Học viên chọn hạng đang học: `student_profiles.license_class` (đăng ký + sidebar switcher → `PATCH /users/me`).
+- Nội dung theo hạng: `study/chapters?licenseClass=`, `exams/papers?licenseClass=`, `articles?licenseClass=` (NULL = tài liệu chung).
+- Phase 1 nội dung đầy đủ: **B2**; A1/A2/B1: catalog + empty state. Nạp thêm: `npm run import:content -- <CODE> database/content/<CODE>` (xem `database/content/README.md`).
 
 ## Vai tro nguoi dung
 
@@ -31,7 +38,7 @@ Tai lieu nay duoc rut ra tu cac man hinh React hien tai. **Chua co API/DB trong 
 - **ExamRegistration**: userId, slotId, status (`pending` | `confirmed` | `cancelled` | `completed`)
 
 ### Noi dung & ho tro
-- **DocumentArticle**: slug, title, body, category, updatedAt, pdfUrl?
+- **DocumentArticle**: slug, title, body, category, licenseClass? (null = chung), updatedAt, pdfUrl?
 - **Notification**: userId, type, title, body, readAt?, actionUrl?
 - **ChatSession** / **ChatMessage**: userId, title, messages[], role user/assistant
 - **LookupRecord**: nationalIdOrCode, studentName, licenseClass, resultStatus (tra cuu cong khai)
@@ -48,7 +55,8 @@ Tai lieu nay duoc rut ra tu cac man hinh React hien tai. **Chua co API/DB trong 
 ## API sketch (REST)
 
 ### Auth
-- `POST /api/auth/register` — body: role, email, password, profile fields
+- `POST /api/auth/register` — body: role, email, password, fullName, phone?, licenseClass? (A1|A2|B1|B2, default B2)
+- `GET /api/license-classes` — catalog hạng + contentStatus
 - `POST /api/auth/login` — email, password → JWT + user
 - `POST /api/auth/forgot-password` — email
 - `POST /api/auth/reset-password` — token, newPassword

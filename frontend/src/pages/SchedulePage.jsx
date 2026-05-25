@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
+import { useLicense } from "../context/LicenseContext.jsx"
 import { PrimaryButton } from "../components/PrimaryButton.jsx"
 import { StatusBadge } from "../components/StatusBadge.jsx"
 import { UiCard } from "../components/UiCard.jsx"
@@ -13,19 +14,28 @@ function toneForSlot(slot) {
 }
 
 export function SchedulePage() {
-  const [licenseClass, setLicenseClass] = useState("B2")
+  const { activeClass, catalog, setActiveClass } = useLicense()
+  const [licenseClass, setLicenseClass] = useState(activeClass)
   const [slots, setSlots] = useState([])
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState(null)
+  const [slotType, setSlotType] = useState("theory_exam")
+  const [myRegs, setMyRegs] = useState([])
   const [pendingSlot, setPendingSlot] = useState(null)
   const [confirmChecked, setConfirmChecked] = useState(false)
+
+  useEffect(() => {
+    setLicenseClass(activeClass)
+  }, [activeClass])
 
   useEffect(() => {
     let cancelled = false
     async function load() {
       setLoading(true)
       try {
-        const data = await apiFetch(`/schedules?licenseClass=${licenseClass}`)
+        const data = await apiFetch(
+          `/schedules?licenseClass=${licenseClass}&slotType=${slotType}`,
+        )
         if (!cancelled) setSlots(data)
       } finally {
         if (!cancelled) setLoading(false)
@@ -35,7 +45,21 @@ export function SchedulePage() {
     return () => {
       cancelled = true
     }
-  }, [licenseClass])
+  }, [licenseClass, slotType])
+
+  useEffect(() => {
+    let cancelled = false
+    apiFetch("/schedules/registrations/me", { auth: true })
+      .then((data) => {
+        if (!cancelled) setMyRegs(data)
+      })
+      .catch(() => {
+        if (!cancelled) setMyRegs([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [message])
 
   const dates = useMemo(() => [...new Set(slots.map((s) => s.date))].sort(), [slots])
   const [selectedDate, setSelectedDate] = useState(null)
@@ -49,16 +73,20 @@ export function SchedulePage() {
   async function handleRegister(slotId) {
     setMessage(null)
     try {
-      await apiFetch("/schedules/registrations", {
+      const res = await apiFetch("/schedules/registrations", {
         method: "POST",
         auth: true,
         body: JSON.stringify({ slotId }),
       })
-      setMessage("Đăng ký ca thi thành công!")
+      setMessage(res?.message ?? "Đã gửi yêu cầu, chờ trung tâm xác nhận.")
       setPendingSlot(null)
       setConfirmChecked(false)
-      const data = await apiFetch(`/schedules?licenseClass=${licenseClass}`)
+      const data = await apiFetch(
+        `/schedules?licenseClass=${licenseClass}&slotType=${slotType}`,
+      )
       setSlots(data)
+      const regs = await apiFetch("/schedules/registrations/me", { auth: true })
+      setMyRegs(regs)
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Đăng ký thất bại"
       setMessage(msg)
@@ -76,22 +104,85 @@ export function SchedulePage() {
         </h1>
         <p className="mt-2 max-w-3xl text-drive-muted">{t("pages.schedule.subtitle")}</p>
         <div className="mt-6 flex flex-wrap gap-3">
-          {["B2", "B1", "A2"].map((code) => (
+          {(catalog.length ? catalog : [{ code: "B2" }]).map((item) => (
             <button
-              key={code}
+              key={item.code}
               type="button"
-              onClick={() => setLicenseClass(code)}
+              onClick={() => {
+                setLicenseClass(item.code)
+                setActiveClass(item.code)
+              }}
               className={`rounded-drive px-4 py-2 text-sm ${
-                licenseClass === code
+                licenseClass === item.code
                   ? "bg-drive-accent text-white"
                   : "border border-drive-border bg-drive-elevated text-drive-muted"
               }`}
             >
-              Hạng {code}
+              Hạng {item.code}
+              {item.hasScheduleSlots === false ? (
+                <span className="ml-1 text-[10px] opacity-80">· {t("license.noSlots")}</span>
+              ) : null}
             </button>
           ))}
         </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setSlotType("theory_exam")}
+            className={`rounded-drive px-3 py-1.5 text-sm ${
+              slotType === "theory_exam"
+                ? "bg-drive-action text-white"
+                : "border border-drive-border text-drive-muted"
+            }`}
+          >
+            Sát hạch lý thuyết
+          </button>
+          <button
+            type="button"
+            onClick={() => setSlotType("road_test")}
+            className={`rounded-drive px-3 py-1.5 text-sm ${
+              slotType === "road_test"
+                ? "bg-drive-action text-white"
+                : "border border-drive-border text-drive-muted"
+            }`}
+          >
+            Chạy thử / thực hành
+          </button>
+        </div>
       </UiCard>
+
+      {myRegs.length > 0 ? (
+        <UiCard variant="panel">
+          <h2 className="font-semibold text-white">Đăng ký của bạn</h2>
+          <ul className="mt-3 space-y-2 text-sm">
+            {myRegs.map((r) => (
+              <li key={r.id} className="flex flex-wrap items-center gap-2 text-drive-muted">
+                <span>
+                  {r.slot?.date
+                    ? new Date(r.slot.date).toLocaleDateString("vi-VN")
+                    : "—"}{" "}
+                  {r.slot?.startTime ? String(r.slot.startTime).slice(0, 5) : ""}
+                </span>
+                <StatusBadge
+                  tone={
+                    r.status === "confirmed"
+                      ? "success"
+                      : r.status === "rejected"
+                        ? "danger"
+                        : "warning"
+                  }
+                >
+                  {r.status === "pending"
+                    ? "Chờ xác nhận"
+                    : r.status === "confirmed"
+                      ? "Đã xác nhận"
+                      : r.status}
+                </StatusBadge>
+              </li>
+            ))}
+          </ul>
+        </UiCard>
+      ) : null}
 
       {message ? (
         <UiCard variant="panel">
@@ -99,11 +190,11 @@ export function SchedulePage() {
             className={`text-sm ${message.includes("thất bại") || message.includes("hồ sơ") ? "text-drive-danger" : "text-drive-action"}`}
           >
             {message}
-            {message.includes("hồ sơ") ? (
+            {message.includes("hồ sơ") || message.includes("duyệt") ? (
               <>
                 {" "}
                 <Link to="/application" className="font-medium underline">
-                  Nộp hồ sơ
+                  Hồ sơ sát hạch
                 </Link>
               </>
             ) : null}

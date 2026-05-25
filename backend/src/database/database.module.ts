@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common"
 import { ConfigModule, ConfigService } from "@nestjs/config"
 import { TypeOrmModule } from "@nestjs/typeorm"
 import { ApplicationDocument } from "../entities/application-document.entity"
+import { CourseEnrollment } from "../entities/course-enrollment.entity"
 import { ChatMessage } from "../entities/chat-message.entity"
 import { ChatSession } from "../entities/chat-session.entity"
 import { LicenseApplication } from "../entities/license-application.entity"
@@ -54,6 +55,7 @@ import { User } from "../entities/user.entity"
             ChatMessage,
             LicenseApplication,
             ApplicationDocument,
+            CourseEnrollment,
           ],
           synchronize: false,
         }

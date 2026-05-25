@@ -27,6 +27,8 @@ export class PlansService {
         code: l.code,
         price: formatPrice(l.price ?? 0),
         priceRaw: Number(l.price ?? 0),
+        enrollmentFee: formatPrice(l.enrollmentFee ?? 5000),
+        enrollmentFeeRaw: Number(l.enrollmentFee ?? 5000),
         description: l.description,
         featured: l.code === "B2",
         features: this.defaultFeatures(l.code),

@@ -11,6 +11,7 @@ import { randomUUID } from "crypto"
 import { Repository } from "typeorm"
 import { ApplicationDocument } from "../../entities/application-document.entity"
 import { LicenseApplication } from "../../entities/license-application.entity"
+import { StudentProfile } from "../../entities/student-profile.entity"
 import {
   isValidDocType,
   maxSlotIndex,
@@ -29,6 +30,8 @@ export class ApplicationsService {
     private readonly appsRepo: Repository<LicenseApplication>,
     @InjectRepository(ApplicationDocument)
     private readonly docsRepo: Repository<ApplicationDocument>,
+    @InjectRepository(StudentProfile)
+    private readonly profilesRepo: Repository<StudentProfile>,
   ) {
     mkdirSync(UPLOAD_DIR, { recursive: true })
   }
@@ -45,9 +48,40 @@ export class ApplicationsService {
     const ok = await this.hasSubmittedApplication(userId)
     if (!ok) {
       throw new ForbiddenException(
-        "Cần nộp hồ sơ sát hạch (đủ giấy tờ theo quy định mới nhất) trước khi thi thử hoặc đăng ký ca thi.",
+        "Cần nộp hồ sơ sát hạch (đủ giấy tờ theo quy định mới nhất) trước khi đăng ký ca thi.",
       )
     }
+  }
+
+  async assertApprovedForExam(userId: string) {
+    const app = await this.appsRepo.findOne({
+      where: { userId },
+      order: { updatedAt: "DESC" },
+    })
+    if (app?.status !== "approved") {
+      throw new ForbiddenException(
+        "Cần hồ sơ sát hạch đã được duyệt trước khi đăng ký ca thi chính thức.",
+      )
+    }
+  }
+
+  private canModifyApplication(app: LicenseApplication) {
+    return app.status === "draft" || Boolean(app.dossierRequestedAt)
+  }
+
+  async requestDossier(applicationId: string, deadline?: Date) {
+    const app = await this.appsRepo.findOne({ where: { id: applicationId } })
+    if (!app) throw new NotFoundException("Không tìm thấy hồ sơ")
+
+    app.dossierRequestedAt = new Date()
+    if (deadline) app.dossierDeadline = deadline
+    await this.appsRepo.save(app)
+
+    const reloaded = await this.appsRepo.findOne({
+      where: { id: applicationId },
+      relations: { documents: true },
+    })
+    return this.toResponse(reloaded!)
   }
 
   async getMyApplication(userId: string) {
@@ -95,8 +129,8 @@ export class ApplicationsService {
 
   async updateApplication(userId: string, id: string, dto: UpdateApplicationDto) {
     const app = await this.getOwnedApplication(userId, id)
-    if (app.status !== "draft") {
-      throw new BadRequestException("Chỉ được sửa hồ sơ ở trạng thái nháp")
+    if (!this.canModifyApplication(app)) {
+      throw new BadRequestException("Không thể sửa hồ sơ ở trạng thái hiện tại")
     }
 
     if (dto.licenseClass !== undefined) app.licenseClass = dto.licenseClass
@@ -123,8 +157,8 @@ export class ApplicationsService {
     slotIndex: number,
   ) {
     const app = await this.getOwnedApplication(userId, applicationId)
-    if (app.status !== "draft") {
-      throw new BadRequestException("Không thể upload khi hồ sơ đã nộp")
+    if (!this.canModifyApplication(app)) {
+      throw new BadRequestException("Không thể upload ở trạng thái hiện tại")
     }
 
     if (!isValidDocType(docType)) {
@@ -207,6 +241,11 @@ export class ApplicationsService {
       )
     }
 
+    const profile = await this.profilesRepo.findOne({ where: { userId } })
+    if (profile?.centerId) {
+      app.centerId = profile.centerId
+    }
+
     app.status = "submitted"
     app.submittedAt = new Date()
     await this.appsRepo.save(app)
@@ -230,12 +269,14 @@ export class ApplicationsService {
     if (doc.application.userId !== userId) {
       throw new ForbiddenException("Không có quyền xem file")
     }
+    return this.resolveDocumentStream(doc)
+  }
 
+  async resolveDocumentStream(doc: ApplicationDocument) {
     const absolutePath = join(process.cwd(), "uploads", doc.filePath)
     if (!existsSync(absolutePath)) {
       throw new NotFoundException("File không tồn tại trên máy chủ")
     }
-
     return {
       stream: createReadStream(absolutePath),
       mimeType: doc.mimeType ?? "application/octet-stream",
@@ -298,6 +339,8 @@ export class ApplicationsService {
       status: app.status,
       personalInfo: app.personalInfo ?? {},
       submittedAt: app.submittedAt,
+      dossierRequestedAt: app.dossierRequestedAt,
+      dossierDeadline: app.dossierDeadline,
       createdAt: app.createdAt,
       updatedAt: app.updatedAt,
       documents,

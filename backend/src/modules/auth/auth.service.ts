@@ -12,6 +12,7 @@ import { Repository } from "typeorm"
 import { FirebaseAdminService } from "../../firebase/firebase-admin.service"
 import { StudentProfile } from "../../entities/student-profile.entity"
 import { User } from "../../entities/user.entity"
+import { DEFAULT_LICENSE_CLASS } from "../../common/license-class.constants"
 import { GoogleLoginDto, LoginDto, RegisterDto, UserRole } from "./dto/auth.dto"
 import { JwtPayload } from "./jwt.strategy"
 
@@ -54,11 +55,13 @@ export class AuthService {
     })
     await this.usersRepo.save(user)
 
-    if (role === UserRole.STUDENT && dto.fullName) {
+    if (role === UserRole.STUDENT) {
       const profile = this.profilesRepo.create({
         userId: user.id,
-        fullName: dto.fullName,
+        fullName: dto.fullName ?? null,
         phone: dto.phone ?? null,
+        licenseClass: dto.licenseClass ?? DEFAULT_LICENSE_CLASS,
+        heldLicenses: [],
       })
       await this.profilesRepo.save(profile)
       user.profile = profile
@@ -124,6 +127,8 @@ export class AuthService {
         userId: user.id,
         fullName,
         phone: null,
+        licenseClass: DEFAULT_LICENSE_CLASS,
+        heldLicenses: [],
       })
       await this.profilesRepo.save(profile)
       user.profile = profile
@@ -135,6 +140,8 @@ export class AuthService {
         userId: user.id,
         fullName,
         phone: null,
+        licenseClass: DEFAULT_LICENSE_CLASS,
+        heldLicenses: [],
       })
       await this.profilesRepo.save(profile)
       user.profile = profile

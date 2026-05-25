@@ -9,8 +9,18 @@ export class SchedulesController {
   constructor(private readonly service: SchedulesService) {}
 
   @Get()
-  list(@Query("licenseClass") licenseClass?: string, @Query("date") date?: string) {
-    return this.service.listSlots(licenseClass, date)
+  list(
+    @Query("licenseClass") licenseClass?: string,
+    @Query("date") date?: string,
+    @Query("slotType") slotType?: string,
+  ) {
+    return this.service.listSlots(licenseClass, date, slotType)
+  }
+
+  @Get("registrations/me")
+  @UseGuards(JwtAuthGuard)
+  myRegistrations(@CurrentUser() user: AuthUser) {
+    return this.service.listMyRegistrations(user.userId)
   }
 
   @Post("registrations")

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
-import { PrimaryButton } from "../components/PrimaryButton.jsx"
 import { UiCard } from "../components/UiCard.jsx"
+import { useLicense } from "../context/LicenseContext.jsx"
+import { DEFAULT_LICENSE_CLASS } from "../lib/license-classes.js"
 import { apiFetch } from "../lib/api.js"
 import { t } from "../lib/strings.js"
 
@@ -21,6 +22,8 @@ const faqItems = [
 ]
 
 export function DocsPage() {
+  const { activeClass } = useLicense()
+  const [docFilter, setDocFilter] = useState(activeClass)
   const [openFaq, setOpenFaq] = useState(1)
   const [articles, setArticles] = useState([])
   const [search, setSearch] = useState("")
@@ -28,15 +31,23 @@ export function DocsPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    setDocFilter(activeClass)
+  }, [activeClass])
+
+  useEffect(() => {
     let cancelled = false
     async function load() {
       setLoading(true)
       try {
-        const q = search.trim() ? `?search=${encodeURIComponent(search.trim())}` : ""
+        const params = new URLSearchParams()
+        if (search.trim()) params.set("search", search.trim())
+        if (docFilter && docFilter !== "all") params.set("licenseClass", docFilter)
+        const q = params.toString() ? `?${params}` : ""
         const data = await apiFetch(`/articles${q}`)
         if (!cancelled) {
           setArticles(data)
-          if (data[0] && !selected) setSelected(data[0])
+          if (data[0]) setSelected(data[0])
+          else setSelected(null)
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -47,7 +58,7 @@ export function DocsPage() {
       cancelled = true
       clearTimeout(timer)
     }
-  }, [search])
+  }, [search, docFilter])
 
   const active = selected ?? articles[0]
 
@@ -66,74 +77,107 @@ export function DocsPage() {
           placeholder={t("pages.docs.searchPlaceholder")}
           className="mx-auto mt-5 block w-full max-w-2xl rounded-drive-pill border border-drive-border bg-drive-elevated px-5 py-3 text-drive-text outline-none focus:ring-2 focus:ring-drive-accent"
         />
+        <div className="mx-auto mt-4 flex max-w-2xl flex-wrap justify-center gap-2">
+          <button
+            type="button"
+            onClick={() => setDocFilter("all")}
+            className={`rounded-drive-pill px-4 py-2 text-sm ${
+              docFilter === "all"
+                ? "bg-drive-action text-white"
+                : "border border-drive-border text-drive-muted"
+            }`}
+          >
+            {t("license.docsAll")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setDocFilter(activeClass)}
+            className={`rounded-drive-pill px-4 py-2 text-sm ${
+              docFilter === activeClass
+                ? "bg-drive-action text-white"
+                : "border border-drive-border text-drive-muted"
+            }`}
+          >
+            {t("license.docsForClass", { code: activeClass })}
+          </button>
+          {activeClass !== DEFAULT_LICENSE_CLASS ? (
+            <button
+              type="button"
+              onClick={() => setDocFilter(DEFAULT_LICENSE_CLASS)}
+              className={`rounded-drive-pill px-4 py-2 text-sm ${
+                docFilter === DEFAULT_LICENSE_CLASS
+                  ? "bg-drive-action text-white"
+                  : "border border-drive-border text-drive-muted"
+              }`}
+            >
+              B2
+            </button>
+          ) : null}
+        </div>
       </UiCard>
 
       <div className="grid gap-6 lg:grid-cols-[220px_1fr_240px]">
         <UiCard as="nav" padding="sm" variant="panel" className="hidden lg:block">
           <p className="text-xs font-semibold uppercase text-drive-placeholder">Bài viết</p>
-          <ul className="mt-3 space-y-2 text-sm">
-            {articles.map((a) => (
-              <li key={a.id}>
+          {loading ? (
+            <p className="mt-3 text-sm text-drive-muted">{t("common.loading")}</p>
+          ) : (
+            <ul className="mt-3 space-y-2 text-sm">
+              {articles.map((a) => (
+                <li key={a.id}>
+                  <button
+                    type="button"
+                    onClick={() => setSelected(a)}
+                    className={`text-left ${active?.id === a.id ? "font-medium text-drive-action" : "text-drive-muted hover:text-white"}`}
+                  >
+                    {a.title}
+                    {a.licenseClass ? (
+                      <span className="ml-1 text-[10px] text-drive-placeholder">({a.licenseClass})</span>
+                    ) : null}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </UiCard>
+
+        <UiCard variant="panel">
+          {active ? (
+            <>
+              <p className="text-xs text-drive-muted">
+                {active.category}
+                {active.licenseClass ? ` · Hạng ${active.licenseClass}` : ` · ${t("license.docsShared")}`}
+              </p>
+              <h2 className="mt-2 text-2xl font-bold text-white">{active.title}</h2>
+              <p className="mt-4 whitespace-pre-wrap text-drive-text">{active.body}</p>
+            </>
+          ) : (
+            <p className="text-drive-muted">{t("license.docsEmpty")}</p>
+          )}
+        </UiCard>
+
+        <UiCard variant="panel">
+          <h3 className="font-semibold text-white">FAQ</h3>
+          <ul className="mt-4 space-y-2">
+            {faqItems.map((item, idx) => (
+              <li key={item.q} className="rounded-drive border border-drive-border-soft">
                 <button
                   type="button"
-                  onClick={() => setSelected(a)}
-                  className={`text-left ${active?.id === a.id ? "font-medium text-drive-action" : "text-drive-muted hover:text-white"}`}
+                  className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-white"
+                  onClick={() => setOpenFaq(openFaq === idx ? -1 : idx)}
                 >
-                  {a.title}
+                  {item.q}
+                  <span>{openFaq === idx ? "−" : "+"}</span>
                 </button>
+                {openFaq === idx ? (
+                  <p className="border-t border-drive-border-soft px-3 py-2 text-xs text-drive-muted">
+                    {item.a}
+                  </p>
+                ) : null}
               </li>
             ))}
           </ul>
         </UiCard>
-
-        <UiCard as="article" padding="lg" variant="panel">
-          {loading ? (
-            <p className="text-drive-muted">Đang tải…</p>
-          ) : active ? (
-            <>
-              <p className="text-xs text-drive-placeholder">
-                Tài liệu › {active.category} › {active.slug}
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold text-white">{active.title}</h2>
-              <p className="mt-2 text-xs text-drive-placeholder">
-                Cập nhật {new Date(active.updatedAt).toLocaleDateString("vi-VN")}
-              </p>
-              <div className="mt-4 rounded-drive border border-drive-accent/30 bg-drive-accent/10 p-4 text-sm text-drive-text">
-                {active.body}
-              </div>
-            </>
-          ) : (
-            <p className="text-drive-muted">Không tìm thấy bài viết.</p>
-          )}
-        </UiCard>
-
-        <aside className="space-y-4">
-          <UiCard variant="panel">
-            <h3 className="font-semibold text-white">{t("pages.docs.toc")}</h3>
-            <ul className="mt-3 space-y-2 text-sm text-drive-muted">
-              {articles.slice(0, 4).map((a) => (
-                <li key={a.id}>{a.category}</li>
-              ))}
-            </ul>
-          </UiCard>
-        </aside>
-      </div>
-
-      <div>
-        <h2 className="mb-4 text-center text-2xl font-bold text-white">{t("pages.docs.faq")}</h2>
-        <div className="space-y-3">
-          {faqItems.map((item, i) => (
-            <button key={item.q} type="button" className="w-full text-left" onClick={() => setOpenFaq(i)}>
-              <UiCard padding="sm" variant="panel" className="cursor-pointer">
-                <div className="flex items-center justify-between text-white">
-                  <span className="font-medium">{item.q}</span>
-                  <span className="text-drive-muted">{openFaq === i ? "−" : "+"}</span>
-                </div>
-                {openFaq === i && item.a ? <p className="mt-3 text-sm text-drive-muted">{item.a}</p> : null}
-              </UiCard>
-            </button>
-          ))}
-        </div>
       </div>
     </section>
   )

@@ -1,21 +1,37 @@
-import { useState } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { useEffect, useState } from "react"
+import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import { PrimaryButton } from "../components/PrimaryButton.jsx"
 import { SocialAuthButtons } from "../components/SocialAuthButtons.jsx"
 import { TextField } from "../components/TextField.jsx"
 import { UiCard } from "../components/UiCard.jsx"
 import { dashboardPathForRole, useAuth } from "../context/AuthContext.jsx"
+import { apiFetch } from "../lib/api.js"
+import { DEFAULT_LICENSE_CLASS, isStudyLicenseCode } from "../lib/license-classes.js"
 import { t } from "../lib/strings.js"
 
 export function RegisterPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { register, loginWithGoogle } = useAuth()
+  const [catalog, setCatalog] = useState([])
+  const [licenseClass, setLicenseClass] = useState(DEFAULT_LICENSE_CLASS)
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState(null)
+
+  useEffect(() => {
+    const prefill = searchParams.get("class")
+    if (prefill && isStudyLicenseCode(prefill)) setLicenseClass(prefill)
+  }, [searchParams])
+
+  useEffect(() => {
+    apiFetch("/license-classes")
+      .then((data) => setCatalog(Array.isArray(data) ? data : []))
+      .catch(() => setCatalog([]))
+  }, [])
 
   async function handleGoogleSuccess(idToken) {
     setError(null)
@@ -50,6 +66,7 @@ export function RegisterPage() {
         fullName: fullName.trim(),
         email: email.trim(),
         password,
+        licenseClass,
       })
       navigate(dashboardPathForRole(user.role), { replace: true })
     } catch (err) {
@@ -84,6 +101,32 @@ export function RegisterPage() {
             {error}
           </p>
         ) : null}
+
+        <div>
+          <p className="mb-2 text-sm font-medium text-drive-text">{t("license.registerChoose")}</p>
+          <div className="grid grid-cols-2 gap-2">
+            {(catalog.length ? catalog : [{ code: "B2", contentReady: true }]).map((item) => (
+              <button
+                key={item.code}
+                type="button"
+                onClick={() => setLicenseClass(item.code)}
+                className={`rounded-drive border px-3 py-2 text-left text-sm transition ${
+                  licenseClass === item.code
+                    ? "border-drive-action bg-drive-action/15 text-white"
+                    : "border-drive-border text-drive-muted hover:border-drive-action/40"
+                }`}
+              >
+                <span className="font-semibold">{item.code}</span>
+                {item.contentReady ? (
+                  <span className="block text-[10px] text-drive-success">{t("license.ready")}</span>
+                ) : (
+                  <span className="block text-[10px] text-amber-300/80">{t("license.comingSoon")}</span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <TextField
           id="fullName"
           label={t("pages.register.fullName")}

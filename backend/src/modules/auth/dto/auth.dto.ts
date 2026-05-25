@@ -1,4 +1,5 @@
-import { IsEmail, IsEnum, IsOptional, IsString, MinLength } from "class-validator"
+import { IsEmail, IsEnum, IsIn, IsOptional, IsString, MinLength } from "class-validator"
+import { STUDY_LICENSE_CODES } from "../../../common/license-class.constants"
 
 export enum UserRole {
   STUDENT = "student",
@@ -25,6 +26,11 @@ export class RegisterDto {
   @IsOptional()
   @IsString()
   phone?: string
+
+  @IsOptional()
+  @IsString()
+  @IsIn([...STUDY_LICENSE_CODES])
+  licenseClass?: string
 }
 
 export class LoginDto {

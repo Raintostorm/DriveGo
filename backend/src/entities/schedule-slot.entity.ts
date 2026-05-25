@@ -1,4 +1,5 @@
 import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm"
+import { User } from "./user.entity"
 
 @Entity("training_centers")
 export class TrainingCenter {
@@ -45,6 +46,9 @@ export class ScheduleSlot {
   @Column({ name: "license_class", type: "varchar", length: 16, nullable: true })
   licenseClass?: string | null
 
+  @Column({ name: "slot_type", type: "varchar", length: 32, default: "theory_exam" })
+  slotType!: string
+
   @Column({ type: "int", default: 0 })
   capacity!: number
 
@@ -60,9 +64,26 @@ export class ExamRegistration {
   @Column({ name: "user_id", type: "uuid" })
   userId!: string
 
+  @ManyToOne(() => User, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "user_id" })
+  user?: User
+
   @Column({ name: "slot_id", type: "uuid" })
   slotId!: string
 
+  @ManyToOne(() => ScheduleSlot, { onDelete: "CASCADE" })
+  @JoinColumn({ name: "slot_id" })
+  slot?: ScheduleSlot
+
   @Column({ type: "varchar", length: 32, default: "pending" })
   status!: string
+
+  @Column({ name: "admin_note", type: "text", nullable: true })
+  adminNote?: string | null
+
+  @Column({ name: "reviewed_at", type: "timestamptz", nullable: true })
+  reviewedAt?: Date | null
+
+  @Column({ name: "reviewed_by", type: "uuid", nullable: true })
+  reviewedBy?: string | null
 }

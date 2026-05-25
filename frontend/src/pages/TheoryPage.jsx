@@ -1,14 +1,19 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
+import { EnrollCourseCta } from "../components/EnrollCourseCta.jsx"
 import { EnrollmentConsentCard } from "../components/EnrollmentConsentCard.jsx"
+import { LicenseContentEmpty } from "../components/LicenseContentEmpty.jsx"
 import { PrimaryButton } from "../components/PrimaryButton.jsx"
 import { UiCard } from "../components/UiCard.jsx"
+import { useLicense } from "../context/LicenseContext.jsx"
 import { apiFetch } from "../lib/api.js"
 import { toYoutubeEmbedUrl, toYoutubeWatchUrl } from "../lib/youtube.js"
 import { t } from "../lib/strings.js"
 
 export function TheoryPage() {
+  const { activeClass, isEnrolled, enrollmentsLoading } = useLicense()
   const [chapters, setChapters] = useState([])
+  const [contentReady, setContentReady] = useState(false)
   const [activeId, setActiveId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -16,16 +21,25 @@ export function TheoryPage() {
 
   useEffect(() => {
     let cancelled = false
+    setLoading(true)
+    setError(null)
     async function load() {
       try {
-        const data = await apiFetch("/study/chapters?licenseClass=B2", { auth: true })
+        const data = await apiFetch(`/study/chapters?licenseClass=${activeClass}`, {
+          auth: true,
+        })
         if (!cancelled) {
-          setChapters(data)
-          if (data[0]) setActiveId(data[0].id)
+          const list = data.chapters ?? (Array.isArray(data) ? data : [])
+          setChapters(list)
+          setContentReady(Boolean(data.contentReady ?? list.length > 0))
+          if (list[0]) setActiveId(list[0].id)
+          else setActiveId(null)
         }
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "Không tải được bài học")
+          setChapters([])
+          setContentReady(false)
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -35,7 +49,7 @@ export function TheoryPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [activeClass])
 
   const active = useMemo(
     () => chapters.find((c) => c.id === activeId) ?? chapters[0],
@@ -59,9 +73,7 @@ export function TheoryPage() {
       })
       setChapters((prev) =>
         prev.map((c) =>
-          c.id === active.id
-            ? { ...c, percent: Math.max(c.percent ?? 0, percent) }
-            : c,
+          c.id === active.id ? { ...c, percent: Math.max(c.percent ?? 0, percent) } : c,
         ),
       )
     } catch (err) {
@@ -71,7 +83,25 @@ export function TheoryPage() {
     }
   }
 
-  if (loading) return <p className="text-drive-muted">Đang tải lộ trình…</p>
+  if (loading || enrollmentsLoading) return <p className="text-drive-muted">{t("common.loading")}</p>
+
+  if (!isEnrolled(activeClass)) {
+    return <EnrollCourseCta licenseClass={activeClass} />
+  }
+
+  if (!contentReady) {
+    return (
+      <EnrollmentConsentCard
+        storageKey="drivego_consent_theory_v1"
+        title={t("consent.theoryTitle")}
+        bullets={[t("consent.theoryBullet1"), t("consent.theoryBullet2")]}
+        confirmLabel={t("consent.theoryConfirm")}
+      >
+        <LicenseContentEmpty feature="theory" />
+      </EnrollmentConsentCard>
+    )
+  }
+
   if (error && !chapters.length) return <p className="text-drive-danger">{error}</p>
 
   const embedSrc = toYoutubeEmbedUrl(active?.videoUrl)
@@ -79,6 +109,9 @@ export function TheoryPage() {
 
   const content = (
     <section className="space-y-8">
+      <p className="text-sm text-drive-muted">
+        {t("license.studyingNow")}: <span className="font-semibold text-white">{activeClass}</span>
+      </p>
       <div className="grid gap-4 lg:grid-cols-2">
         <UiCard padding="lg" variant="panel">
           <h1 className="text-4xl font-extrabold leading-tight text-white sm:text-5xl">
@@ -89,7 +122,9 @@ export function TheoryPage() {
           <div className="mt-6 flex flex-wrap gap-3">
             <PrimaryButton
               variant="action"
-              onClick={() => document.getElementById("theory-video")?.scrollIntoView({ behavior: "smooth" })}
+              onClick={() =>
+                document.getElementById("theory-video")?.scrollIntoView({ behavior: "smooth" })
+              }
             >
               {t("pages.theory.startNow")}
             </PrimaryButton>
@@ -187,10 +222,7 @@ export function TheoryPage() {
     <EnrollmentConsentCard
       storageKey="drivego_consent_theory_v1"
       title={t("consent.theoryTitle")}
-      bullets={[
-        t("consent.theoryBullet1"),
-        t("consent.theoryBullet2"),
-      ]}
+      bullets={[t("consent.theoryBullet1"), t("consent.theoryBullet2")]}
       confirmLabel={t("consent.theoryConfirm")}
     >
       {content}

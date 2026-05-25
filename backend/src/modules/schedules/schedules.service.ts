@@ -14,7 +14,7 @@ export class SchedulesService {
     private readonly applications: ApplicationsService,
   ) {}
 
-  async listSlots(licenseClass?: string, date?: string) {
+  async listSlots(licenseClass?: string, date?: string, slotType?: string) {
     const qb = this.slotsRepo
       .createQueryBuilder("s")
       .leftJoinAndSelect("s.center", "center")
@@ -27,6 +27,11 @@ export class SchedulesService {
     if (date) {
       qb.andWhere("s.slot_date = :date", { date })
     }
+    if (slotType) {
+      qb.andWhere("s.slot_type = :slotType", { slotType })
+    } else {
+      qb.andWhere("s.slot_type = :defaultType", { defaultType: "theory_exam" })
+    }
 
     const slots = await qb.getMany()
     return slots.map((s) => {
@@ -34,6 +39,7 @@ export class SchedulesService {
       const full = remaining === 0
       return {
         id: s.id,
+        slotType: s.slotType,
         date: s.slotDate,
         startTime: s.startTime,
         endTime: s.endTime,
@@ -50,8 +56,30 @@ export class SchedulesService {
     })
   }
 
+  async listMyRegistrations(userId: string) {
+    const rows = await this.registrationsRepo.find({
+      where: { userId },
+      relations: { slot: true },
+      order: { id: "DESC" },
+    })
+    return rows.map((r) => ({
+      id: r.id,
+      status: r.status,
+      slotId: r.slotId,
+      slot: r.slot
+        ? {
+            date: r.slot.slotDate,
+            startTime: r.slot.startTime,
+            endTime: r.slot.endTime,
+            venue: r.slot.venue,
+            slotType: r.slot.slotType,
+          }
+        : null,
+    }))
+  }
+
   async register(userId: string, slotId: string) {
-    await this.applications.assertSubmittedForExam(userId)
+    await this.applications.assertApprovedForExam(userId)
 
     const slot = await this.slotsRepo.findOne({ where: { id: slotId } })
     if (!slot) throw new NotFoundException("Không tìm thấy ca thi")
@@ -67,16 +95,25 @@ export class SchedulesService {
       throw new ConflictException("Bạn đã đăng ký ca thi này")
     }
 
+    const pendingOnSlot = await this.registrationsRepo.count({
+      where: { userId, slotId, status: "pending" },
+    })
+    if (pendingOnSlot > 0) {
+      throw new ConflictException("Bạn đã gửi yêu cầu cho ca này")
+    }
+
     const reg = this.registrationsRepo.create({
       userId,
       slotId,
-      status: "confirmed",
+      status: "pending",
     })
     await this.registrationsRepo.save(reg)
 
-    slot.registeredCount += 1
-    await this.slotsRepo.save(slot)
-
-    return { registrationId: reg.id, slotId, status: "confirmed" }
+    return {
+      registrationId: reg.id,
+      slotId,
+      status: "pending",
+      message: "Đã gửi yêu cầu, chờ trung tâm xác nhận",
+    }
   }
 }

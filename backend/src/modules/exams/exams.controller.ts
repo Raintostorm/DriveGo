@@ -10,8 +10,9 @@ export class ExamsController {
   constructor(private readonly examsService: ExamsService) {}
 
   @Get("papers")
-  listPapers(@Query("licenseClass") licenseClass?: string) {
-    return this.examsService.listPapers(licenseClass)
+  @UseGuards(JwtAuthGuard)
+  listPapers(@CurrentUser() user: AuthUser, @Query("licenseClass") licenseClass?: string) {
+    return this.examsService.listPapers(user.userId, licenseClass)
   }
 
   @Get("attempts/history")

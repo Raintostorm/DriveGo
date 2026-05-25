@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   ServiceUnavailableException,
@@ -7,9 +8,12 @@ import {
 import { InjectRepository } from "@nestjs/typeorm"
 import { randomBytes } from "crypto"
 import { Repository } from "typeorm"
+import { EnrollmentService } from "../../common/enrollment.service"
+import { isStudyLicenseCode } from "../../common/license-class.constants"
 import { Payment } from "../../entities/payment.entity"
 import { StudentProfile } from "../../entities/student-profile.entity"
 import { SubscriptionPlan } from "../../entities/subscription-plan.entity"
+import { User } from "../../entities/user.entity"
 import { CheckoutDto } from "./dto/checkout.dto"
 import { SepayWebhookDto } from "./dto/sepay-webhook.dto"
 import { SepayConfigService } from "./sepay-config.service"
@@ -26,10 +30,18 @@ export class PaymentsService {
     private readonly plansRepo: Repository<SubscriptionPlan>,
     @InjectRepository(StudentProfile)
     private readonly profilesRepo: Repository<StudentProfile>,
+    @InjectRepository(User)
+    private readonly usersRepo: Repository<User>,
+    private readonly enrollment: EnrollmentService,
     private readonly sepay: SepayConfigService,
   ) {}
 
   async checkout(userId: string, dto: CheckoutDto) {
+    const user = await this.usersRepo.findOne({ where: { id: userId } })
+    if (!user || user.role !== "student") {
+      throw new ForbiddenException("Chỉ học viên mới được thanh toán trên hệ thống")
+    }
+
     const bank = this.sepay.getBankInfo()
     if (!bank.accountNumber) {
       throw new ServiceUnavailableException(
@@ -37,14 +49,33 @@ export class PaymentsService {
       )
     }
 
-    const plan = await this.plansRepo.findOne({ where: { code: dto.planCode } })
-    if (!plan) {
-      throw new NotFoundException("Không tìm thấy gói đăng ký")
-    }
+    const paymentType = dto.paymentType ?? "premium"
+    let amount = 0
+    let planId: string | null = null
+    let licenseClass: string | null = null
 
-    const amount = Number(plan.priceMonthly)
-    if (!amount || amount <= 0) {
-      throw new BadRequestException("Gói này không cần thanh toán")
+    if (paymentType === "premium") {
+      const planCode = dto.planCode ?? "premium"
+      const plan = await this.plansRepo.findOne({ where: { code: planCode } })
+      if (!plan) {
+        throw new NotFoundException("Không tìm thấy gói đăng ký")
+      }
+      amount = Number(plan.priceMonthly)
+      if (!amount || amount <= 0) {
+        throw new BadRequestException("Gói này không cần thanh toán")
+      }
+      planId = plan.id
+    } else if (paymentType === "enrollment") {
+      if (!dto.licenseClass || !isStudyLicenseCode(dto.licenseClass)) {
+        throw new BadRequestException("licenseClass không hợp lệ (A1, A2, B1, B2)")
+      }
+      if (await this.enrollment.isEnrolled(userId, dto.licenseClass)) {
+        throw new BadRequestException(`Bạn đã đăng ký khóa hạng ${dto.licenseClass}`)
+      }
+      amount = await this.enrollment.getEnrollmentFee(dto.licenseClass)
+      licenseClass = dto.licenseClass
+    } else {
+      throw new BadRequestException("paymentType không hợp lệ")
     }
 
     const paymentCode = this.generatePaymentCode()
@@ -52,7 +83,9 @@ export class PaymentsService {
 
     const payment = this.paymentsRepo.create({
       userId,
-      planId: plan.id,
+      planId,
+      paymentType,
+      licenseClass,
       amount: String(amount),
       method: "sepay",
       status: "pending",
@@ -61,6 +94,8 @@ export class PaymentsService {
         fullName: dto.fullName ?? null,
         email: dto.email ?? null,
         expiresAt,
+        paymentType,
+        licenseClass,
       },
     })
     await this.paymentsRepo.save(payment)
@@ -74,6 +109,8 @@ export class PaymentsService {
 
     return {
       paymentId: payment.id,
+      paymentType,
+      licenseClass,
       paymentCode,
       amount,
       transferContent: paymentCode,
@@ -93,6 +130,8 @@ export class PaymentsService {
     return {
       id: payment.id,
       status: payment.status,
+      paymentType: payment.paymentType,
+      licenseClass: payment.licenseClass,
       paymentCode: payment.customerInfo?.paymentCode ?? null,
       amount: Number(payment.amount),
       paidAt: payment.customerInfo?.paidAt ?? null,
@@ -178,6 +217,17 @@ export class PaymentsService {
       sepayGateway: payload.gateway ?? null,
     }
     await this.paymentsRepo.save(payment)
+
+    const type = payment.paymentType ?? (payment.planId ? "premium" : "enrollment")
+
+    if (type === "enrollment" && payment.licenseClass) {
+      await this.enrollment.activateFromPayment(
+        payment.userId,
+        payment.licenseClass,
+        payment.id,
+      )
+      return
+    }
 
     if (!payment.planId) return
 

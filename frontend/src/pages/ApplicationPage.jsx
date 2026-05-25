@@ -5,6 +5,7 @@ import { PrimaryButton } from "../components/PrimaryButton.jsx"
 import { StatusBadge } from "../components/StatusBadge.jsx"
 import { TextField } from "../components/TextField.jsx"
 import { UiCard } from "../components/UiCard.jsx"
+import { useLicense } from "../context/LicenseContext.jsx"
 import { apiFetch, apiFetchBlob, apiUpload } from "../lib/api.js"
 import { t } from "../lib/strings.js"
 
@@ -56,6 +57,7 @@ function applyApplicationToForm(app, setters) {
 }
 
 export function ApplicationPage() {
+  const { activeClass } = useLicense()
   const [application, setApplication] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -65,7 +67,11 @@ export function ApplicationPage() {
   const [error, setError] = useState(null)
   const [previewUrls, setPreviewUrls] = useState({})
 
-  const [licenseClass, setLicenseClass] = useState("B2")
+  const [licenseClass, setLicenseClass] = useState(activeClass)
+
+  useEffect(() => {
+    setLicenseClass(activeClass)
+  }, [activeClass])
   const [fullName, setFullName] = useState("")
   const [dateOfBirth, setDateOfBirth] = useState("")
   const [nationalId, setNationalId] = useState("")
@@ -75,7 +81,9 @@ export function ApplicationPage() {
   const [permanentAddress, setPermanentAddress] = useState("")
 
   const isDraft = application?.status === "draft"
-  const readOnly = application && !isDraft
+  const dossierRequested = Boolean(application?.dossierRequestedAt)
+  const readOnly =
+    application && application.status !== "draft" && !dossierRequested
 
   const loadApplication = useCallback(async () => {
     setLoading(true)
@@ -84,7 +92,11 @@ export function ApplicationPage() {
       let data = await apiFetch("/applications/me", { auth: true })
       let app = unwrapApplication(data)
       if (!app) {
-        data = await apiFetch("/applications", { method: "POST", auth: true, body: "{}" })
+        data = await apiFetch("/applications", {
+          method: "POST",
+          auth: true,
+          body: JSON.stringify({ licenseClass }),
+        })
         app = unwrapApplication(data)
       }
       applyApplicationToForm(app, {
@@ -250,11 +262,25 @@ export function ApplicationPage() {
       <PageHeader title={t("application.title")} subtitle={t("application.subtitle")} />
 
       <p className="rounded-drive border border-drive-border-soft bg-drive-sidebar px-4 py-3 text-sm text-drive-muted">
-        {t("application.profileNote")}{" "}
+        Nộp hồ sơ khi trung tâm yêu cầu hoặc trước hạn đăng ký ca thi chính thức. Học và thi thử
+        không cần hồ sơ.{" "}
         <Link to="/profile" className="font-medium text-drive-action hover:underline">
           Hồ sơ cá nhân
         </Link>
       </p>
+
+      {dossierRequested ? (
+        <UiCard variant="panel" className="border-amber-500/40 bg-amber-500/10">
+          <p className="font-semibold text-amber-200">Trung tâm yêu cầu nộp hồ sơ</p>
+          {application.dossierDeadline ? (
+            <p className="mt-1 text-sm text-drive-muted">
+              Hạn nộp: {new Date(application.dossierDeadline).toLocaleString("vi-VN")}
+            </p>
+          ) : (
+            <p className="mt-1 text-sm text-drive-muted">Vui lòng hoàn thiện và nộp sớm nhất có thể.</p>
+          )}
+        </UiCard>
+      ) : null}
 
       {application ? (
         <div className="flex flex-wrap items-center gap-3">

@@ -39,4 +39,19 @@ export class NotificationsService {
     await this.repo.save(row)
     return { id: row.id, read: true }
   }
+
+  async createForUser(
+    userId: string,
+    payload: { type: string; title: string; body?: string; actionUrl?: string },
+  ) {
+    const row = this.repo.create({
+      userId,
+      type: payload.type,
+      title: payload.title,
+      body: payload.body ?? null,
+      actionUrl: payload.actionUrl ?? null,
+    })
+    await this.repo.save(row)
+    return { id: row.id }
+  }
 }
