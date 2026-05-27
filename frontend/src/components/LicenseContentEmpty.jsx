@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom"
 import { EnrollCourseCta } from "./EnrollCourseCta.jsx"
-import { PrimaryButton } from "./PrimaryButton.jsx"
 import { UiCard } from "./UiCard.jsx"
 import { useLicense } from "../context/LicenseContext.jsx"
 import { t } from "../lib/strings.js"
@@ -29,12 +28,18 @@ export function LicenseContentEmpty({ feature }) {
       <p className="mt-3 text-sm text-drive-muted">{body}</p>
       <div className="mt-6 flex flex-wrap justify-center gap-3">
         {anyReady ? (
-          <Link to="/profile">
-            <PrimaryButton variant="outline">{t("license.viewProfile")}</PrimaryButton>
+          <Link
+            to="/profile"
+            className="rounded-drive-pill border border-drive-border bg-drive-elevated px-6 py-3 text-sm font-bold text-white transition hover:bg-drive-panel"
+          >
+            {t("license.viewProfile")}
           </Link>
         ) : (
-          <Link to="/pricing">
-            <PrimaryButton variant="action">Bảng giá</PrimaryButton>
+          <Link
+            to="/pricing"
+            className="rounded-drive-pill bg-drive-action px-6 py-3 text-sm font-bold text-white shadow-drive-action transition hover:brightness-110"
+          >
+            Bảng giá
           </Link>
         )}
       </div>

@@ -41,7 +41,13 @@ CREATE TABLE IF NOT EXISTS license_classes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   code VARCHAR(16) NOT NULL UNIQUE,
   price NUMERIC(12, 2),
-  description TEXT
+  enrollment_fee NUMERIC(12, 2) DEFAULT 5000,
+  description TEXT,
+  questions_per_exam INT NOT NULL DEFAULT 30,
+  exam_duration_minutes INT NOT NULL DEFAULT 22,
+  pass_min_correct INT NOT NULL DEFAULT 26,
+  bank_question_count INT NOT NULL DEFAULT 600,
+  papers_count INT NOT NULL DEFAULT 20
 );
 
 CREATE TABLE IF NOT EXISTS study_chapters (

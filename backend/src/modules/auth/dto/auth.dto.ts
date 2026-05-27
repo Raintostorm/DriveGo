@@ -1,4 +1,4 @@
-import { IsEmail, IsEnum, IsIn, IsOptional, IsString, MinLength } from "class-validator"
+import { IsEmail, IsIn, IsOptional, IsString, MinLength } from "class-validator"
 import { STUDY_LICENSE_CODES } from "../../../common/license-class.constants"
 
 export enum UserRole {
@@ -8,10 +8,6 @@ export enum UserRole {
 }
 
 export class RegisterDto {
-  @IsOptional()
-  @IsEnum(UserRole)
-  role?: UserRole
-
   @IsEmail()
   email!: string
 

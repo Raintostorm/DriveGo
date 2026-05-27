@@ -11,43 +11,57 @@ flowchart TB
     Nest[NestJS_3000_api]
   end
   subgraph data [database]
+    PG[(PostgreSQL)]
     SQL[schema_migrations_seeds]
   end
   React -->|VITE_API_URL| Nest
-  Nest -->|DATABASE_URL_sau| SQL
+  Nest --> PG
+  SQL --> PG
 ```
 
 ## Folder
 
 | Folder | Trách nhiệm |
 |--------|-------------|
-| `frontend/` | UI, routing, copy tiếng Việt, gọi API qua `src/lib/api.js` |
-| `backend/` | REST `/api/*`, auth, business logic (skeleton hiện tại) |
-| `database/` | DDL, migrations, seeds — tách khỏi Nest để dễ review SQL |
-| `docs/` | Spec domain, Figma map, architecture |
+| `frontend/` | UI, routing (`/` = landing), copy tiếng Việt, gọi API qua `src/lib/api.js` |
+| `backend/` | REST `/api/*`, auth, business logic (TypeORM + PostgreSQL) |
+| `database/` | DDL, migrations, seeds, import nội dung đề thi |
+| `docs/` | Spec domain, [roles-and-schedules.md](./roles-and-schedules.md), project-recap |
 
-## Backend modules (NestJS)
+## Backend modules (NestJS) — trạng thái hiện tại
 
 | Module | Route prefix | Trạng thái |
 |--------|--------------|------------|
 | health | `/api/health` | Hoạt động |
-| auth | `/api/auth` | Login, register (PostgreSQL + JWT) |
-| users | `/api/users` | `GET /me` (JWT) |
-| lookup | `/api/lookup` | Tra cứu từ DB |
-| exams | `/api/exams` | Stub |
-| schedules | `/api/schedules` | Stub |
-| notifications | `/api/notifications` | Stub |
-| articles | `/api/articles` | Stub |
-| plans | `/api/plans` | Stub |
-| centers | `/api/centers` | Stub |
-| chat | `/api/chat` | Stub |
+| auth | `/api/auth` | Login, register, Google (JWT) |
+| users | `/api/users` | `GET/PATCH /me` |
+| study | `/api/study` | Chương, tiến độ (gate enrolled) |
+| exams | `/api/exams` | Đề thi, nộp bài, lịch sử (gate enrolled + premium limit) |
+| schedules | `/api/schedules` | Ca thi, đăng ký (gate hồ sơ approved); optional JWT lọc theo center |
+| sessions | `/api/sessions` | Buổi học, điểm danh HV |
+| applications | `/api/applications` | Hồ sơ sát hạch + upload |
+| payments | `/api/payments` | SePay checkout + webhook |
+| enrollments | `/api/enrollments` | Khóa học theo hạng |
+| admin | `/api/admin/*` | Portal center/system (scope `center_id`) |
+| notifications | `/api/notifications` | Thông báo in-app |
+| articles | `/api/articles` | Tài liệu / blog |
+| plans | `/api/plans` | Catalog + Premium |
+| lookup | `/api/lookup` | Tra cứu |
+| chat | `/api/chat` | AI (Premium; Gemini nếu có API key) |
 
-## Auth flow (đã bật)
+**Đã gỡ:** `/api/centers/*` stub — quản lý trung tâm qua `/api/admin/centers` (system_admin).
+
+## Auth & roles
 
 - `POST /api/auth/login`, `POST /api/auth/register` — bcrypt + JWT
-- `GET /api/users/me` — Bearer token
-- Frontend: `AuthProvider`, trang dashboard yêu cầu đăng nhập
-- Demo: `student@drivego.demo` / `DriveGo123!` (sau `npm run seed:db`)
+- `GET /api/users/me` — Bearer token (`centerName` cho staff)
+- Roles: `student`, `center_admin`, `system_admin`
+- Chi tiết điều kiện từng luồng: [roles-and-schedules.md](./roles-and-schedules.md)
+
+## Landing mặc định
+
+- `http://localhost:5173/` → `HomePage` (marketing layout)
+- `/home` redirect về `/`
 
 ## Biến môi trường
 
@@ -64,10 +78,9 @@ PORT=3000
 CORS_ORIGIN=http://localhost:5173
 DATABASE_URL=postgresql://postgres:YOUR_PASSWORD@localhost:5432/DriveGo
 JWT_SECRET=change-me
+GEMINI_API_KEY=          # tùy chọn — AI chat
 ```
 
-## Bước tiếp
+## Demo
 
-1. Implement API: `exams`, `history`, `notifications`, `schedules` từ PostgreSQL.
-2. Thay mock data trên các trang dashboard bằng gọi API.
-3. Payment / OAuth / AI (xem `docs/integrations.md`).
+`npm run reset:db` → `student@drivego.demo`, `center@drivego.demo`, `admin@drivego.demo` / `DriveGo123!`

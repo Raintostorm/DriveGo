@@ -14,6 +14,11 @@ export function AiChatPage() {
   const [sending, setSending] = useState(false)
   const [premiumError, setPremiumError] = useState(null)
 
+  function isPremiumGateError(message) {
+    const lower = message.toLowerCase()
+    return lower.includes("premium") && lower.includes("chỉ dành")
+  }
+
   async function loadSession(id) {
     const data = await apiFetch(`/chat/sessions/${id}`, { auth: true })
     setMessages(data.messages ?? [])
@@ -121,10 +126,15 @@ export function AiChatPage() {
         </div>
         {premiumError ? (
           <p className="mt-4 text-sm text-drive-danger">
-            {premiumError}{" "}
-            <Link to="/upgrade" className="font-medium text-drive-action underline">
-              Nâng cấp Premium
-            </Link>
+            {premiumError}
+            {isPremiumGateError(premiumError) ? (
+              <>
+                {" "}
+                <Link to="/upgrade" className="font-medium text-drive-action underline">
+                  Nâng cấp Premium
+                </Link>
+              </>
+            ) : null}
           </p>
         ) : null}
         <form onSubmit={handleSend} className="mt-4 flex gap-2">

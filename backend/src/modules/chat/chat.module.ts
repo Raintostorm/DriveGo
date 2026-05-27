@@ -6,10 +6,11 @@ import { PremiumModule } from "../../common/premium.module"
 import { AuthModule } from "../auth/auth.module"
 import { ChatController } from "./chat.controller"
 import { ChatService } from "./chat.service"
+import { GeminiService } from "./gemini.service"
 
 @Module({
   imports: [TypeOrmModule.forFeature([ChatSession, ChatMessage]), AuthModule, PremiumModule],
   controllers: [ChatController],
-  providers: [ChatService],
+  providers: [ChatService, GeminiService],
 })
 export class ChatModule {}

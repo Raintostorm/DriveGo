@@ -79,10 +79,11 @@ export function NotificationsPage() {
             <p className="mt-1 text-sm leading-relaxed text-drive-muted">{n.body}</p>
             <div className="mt-3 flex flex-wrap gap-2">
               {n.actionUrl ? (
-                <Link to={n.actionUrl}>
-                  <PrimaryButton variant="action" className="!py-1.5 !text-xs">
-                    Xem chi tiết
-                  </PrimaryButton>
+                <Link
+                  to={n.actionUrl}
+                  className="rounded-drive-pill bg-drive-action px-4 py-1.5 text-xs font-bold text-white shadow-drive-action transition hover:brightness-110"
+                >
+                  Xem chi tiết
                 </Link>
               ) : null}
               {!n.read ? (

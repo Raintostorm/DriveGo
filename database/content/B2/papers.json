@@ -5891,7 +5891,7 @@
     {
       "id": "55555555-5555-4555-8555-000000001701",
       "paperNumber": 17,
-      "questionCount": 29,
+      "questionCount": 30,
       "isMock": true,
       "questions": [
         {
@@ -6241,6 +6241,18 @@
           "correctIndex": 1,
           "isCritical": false,
           "imageUrl": "/content/B2/images/cau-510.png"
+        },
+        {
+          "body": "Theo hướng mũi tên, hướng nào xe không được phép đi?",
+          "answers": [
+            "Hướng 2 và 5.",
+            "Chỉ hướng 1.",
+            "—",
+            "—"
+          ],
+          "correctIndex": 1,
+          "isCritical": false,
+          "imageUrl": "/content/B2/images/cau-511.png"
         }
       ]
     },

@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom"
-import { PrimaryButton } from "../components/PrimaryButton.jsx"
 import { UiCard } from "../components/UiCard.jsx"
 import { t } from "../lib/strings.js"
 
@@ -31,11 +30,17 @@ export function HomePage() {
           {t("pages.home.subtitle")}
         </p>
         <div className="relative mt-8 flex flex-wrap justify-center gap-4">
-          <Link to="/register">
-            <PrimaryButton variant="action">{t("common.startFree")}</PrimaryButton>
+          <Link
+            to="/register"
+            className="rounded-drive-pill bg-drive-action px-6 py-3 text-sm font-bold text-white shadow-drive-action transition hover:brightness-110"
+          >
+            {t("common.startFree")}
           </Link>
-          <Link to="/exam">
-            <PrimaryButton variant="outline">{t("common.viewDemo")}</PrimaryButton>
+          <Link
+            to="/exam"
+            className="rounded-drive-pill border border-drive-border bg-drive-elevated px-6 py-3 text-sm font-bold text-white transition hover:bg-drive-panel"
+          >
+            {t("common.viewDemo")}
           </Link>
         </div>
       </div>
@@ -66,8 +71,11 @@ export function HomePage() {
       <UiCard variant="panel" className="text-center">
         <p className="text-sm font-medium text-drive-action">Gói học phổ biến</p>
         <h3 className="mt-2 text-2xl font-bold text-white">Bằng B2 — từ 15.000.000đ</h3>
-        <Link to="/pricing" className="mt-6 inline-block">
-          <PrimaryButton variant="action">{t("common.viewAll")}</PrimaryButton>
+        <Link
+          to="/pricing"
+          className="mt-6 inline-block rounded-drive-pill bg-drive-action px-6 py-3 text-sm font-bold text-white shadow-drive-action transition hover:brightness-110"
+        >
+          {t("common.viewAll")}
         </Link>
       </UiCard>
     </section>

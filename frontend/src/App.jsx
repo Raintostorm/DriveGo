@@ -19,7 +19,7 @@ export default function App() {
       <AppShell>
         <Suspense fallback={<PageFallback />}>
           <Routes>
-            <Route path="/" element={<Navigate to="/home" replace />} />
+            <Route path="/home" element={<Navigate to="/" replace />} />
             {routeConfig.map(({ path, layout, LazyPage }) => (
               <Route
                 key={path}
@@ -27,6 +27,7 @@ export default function App() {
                 element={<LazyRoute layout={layout} LazyPage={LazyPage} />}
               />
             ))}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
       </AppShell>

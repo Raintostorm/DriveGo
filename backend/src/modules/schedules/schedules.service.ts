@@ -1,8 +1,11 @@
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common"
 import { ApplicationsService } from "../applications/applications.service"
 import { InjectRepository } from "@nestjs/typeorm"
-import { Repository } from "typeorm"
+import { DataSource, In, Repository } from "typeorm"
 import { ExamRegistration, ScheduleSlot } from "../../entities/schedule-slot.entity"
+import { StudentProfile } from "../../entities/student-profile.entity"
+
+const HELD_STATUSES = ["pending", "confirmed"] as const
 
 @Injectable()
 export class SchedulesService {
@@ -11,10 +14,62 @@ export class SchedulesService {
     private readonly slotsRepo: Repository<ScheduleSlot>,
     @InjectRepository(ExamRegistration)
     private readonly registrationsRepo: Repository<ExamRegistration>,
+    @InjectRepository(StudentProfile)
+    private readonly profilesRepo: Repository<StudentProfile>,
+    private readonly dataSource: DataSource,
     private readonly applications: ApplicationsService,
   ) {}
 
-  async listSlots(licenseClass?: string, date?: string, slotType?: string) {
+  private async countHeldSeats(slotId: string): Promise<number> {
+    return this.registrationsRepo.count({
+      where: { slotId, status: In([...HELD_STATUSES]) },
+    })
+  }
+
+  private async countHeldBySlotIds(slotIds: string[]): Promise<Map<string, number>> {
+    if (slotIds.length === 0) return new Map()
+    const rows = await this.registrationsRepo
+      .createQueryBuilder("r")
+      .select("r.slot_id", "slotId")
+      .addSelect("COUNT(*)", "cnt")
+      .where("r.slot_id IN (:...slotIds)", { slotIds })
+      .andWhere("r.status IN (:...statuses)", { statuses: [...HELD_STATUSES] })
+      .groupBy("r.slot_id")
+      .getRawMany<{ slotId: string; cnt: string }>()
+    return new Map(rows.map((r) => [r.slotId, Number(r.cnt)]))
+  }
+
+  private mapSlotRow(
+    s: ScheduleSlot,
+    held: number,
+  ) {
+    const remaining = Math.max(0, s.capacity - held)
+    const full = held >= s.capacity
+    return {
+      id: s.id,
+      slotType: s.slotType,
+      date: s.slotDate,
+      startTime: s.startTime,
+      endTime: s.endTime,
+      timeLabel: `${String(s.startTime).slice(0, 5)} - ${String(s.endTime).slice(0, 5)}`,
+      venue: s.venue,
+      centerName: s.center?.name,
+      licenseClass: s.licenseClass,
+      capacity: s.capacity,
+      registeredCount: s.registeredCount,
+      heldSeats: held,
+      remaining,
+      full,
+      seatsLabel: full ? "Đã đầy suất đăng ký" : `${remaining}/${s.capacity}`,
+    }
+  }
+
+  async listSlots(
+    licenseClass?: string,
+    date?: string,
+    slotType?: string,
+    userId?: string,
+  ) {
     const qb = this.slotsRepo
       .createQueryBuilder("s")
       .leftJoinAndSelect("s.center", "center")
@@ -33,27 +88,16 @@ export class SchedulesService {
       qb.andWhere("s.slot_type = :defaultType", { defaultType: "theory_exam" })
     }
 
-    const slots = await qb.getMany()
-    return slots.map((s) => {
-      const remaining = Math.max(0, s.capacity - s.registeredCount)
-      const full = remaining === 0
-      return {
-        id: s.id,
-        slotType: s.slotType,
-        date: s.slotDate,
-        startTime: s.startTime,
-        endTime: s.endTime,
-        timeLabel: `${String(s.startTime).slice(0, 5)} - ${String(s.endTime).slice(0, 5)}`,
-        venue: s.venue,
-        centerName: s.center?.name,
-        licenseClass: s.licenseClass,
-        capacity: s.capacity,
-        registeredCount: s.registeredCount,
-        remaining,
-        full,
-        seatsLabel: full ? "Đã đầy suất đăng ký" : `${remaining}/${s.capacity}`,
+    if (userId) {
+      const profile = await this.profilesRepo.findOne({ where: { userId } })
+      if (profile?.centerId) {
+        qb.andWhere("s.center_id = :centerId", { centerId: profile.centerId })
       }
-    })
+    }
+
+    const slots = await qb.getMany()
+    const heldBySlot = await this.countHeldBySlotIds(slots.map((s) => s.id))
+    return slots.map((s) => this.mapSlotRow(s, heldBySlot.get(s.id) ?? 0))
   }
 
   async listMyRegistrations(userId: string) {
@@ -80,40 +124,42 @@ export class SchedulesService {
 
   async register(userId: string, slotId: string) {
     await this.applications.assertApprovedForExam(userId)
+    return this.dataSource.transaction(async (manager) => {
+      const slot = await manager
+        .getRepository(ScheduleSlot)
+        .createQueryBuilder("s")
+        .setLock("pessimistic_write")
+        .where("s.id = :slotId", { slotId })
+        .getOne()
+      if (!slot) throw new NotFoundException("Không tìm thấy ca thi")
 
-    const slot = await this.slotsRepo.findOne({ where: { id: slotId } })
-    if (!slot) throw new NotFoundException("Không tìm thấy ca thi")
+      const held = await manager.getRepository(ExamRegistration).count({
+        where: { slotId, status: In([...HELD_STATUSES]) },
+      })
+      if (held >= slot.capacity) {
+        throw new ConflictException("Ca thi đã đầy")
+      }
 
-    if (slot.registeredCount >= slot.capacity) {
-      throw new ConflictException("Ca thi đã đầy")
-    }
+      const existing = await manager.getRepository(ExamRegistration).findOne({
+        where: { userId, slotId },
+      })
+      if (existing) {
+        throw new ConflictException("Bạn đã đăng ký ca thi này")
+      }
 
-    const existing = await this.registrationsRepo.findOne({
-      where: { userId, slotId },
+      const reg = manager.getRepository(ExamRegistration).create({
+        userId,
+        slotId,
+        status: "pending",
+      })
+      await manager.getRepository(ExamRegistration).save(reg)
+
+      return {
+        registrationId: reg.id,
+        slotId,
+        status: "pending",
+        message: "Đã gửi yêu cầu, chờ trung tâm xác nhận",
+      }
     })
-    if (existing) {
-      throw new ConflictException("Bạn đã đăng ký ca thi này")
-    }
-
-    const pendingOnSlot = await this.registrationsRepo.count({
-      where: { userId, slotId, status: "pending" },
-    })
-    if (pendingOnSlot > 0) {
-      throw new ConflictException("Bạn đã gửi yêu cầu cho ca này")
-    }
-
-    const reg = this.registrationsRepo.create({
-      userId,
-      slotId,
-      status: "pending",
-    })
-    await this.registrationsRepo.save(reg)
-
-    return {
-      registrationId: reg.id,
-      slotId,
-      status: "pending",
-      message: "Đã gửi yêu cầu, chờ trung tâm xác nhận",
-    }
   }
 }

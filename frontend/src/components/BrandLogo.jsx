@@ -4,7 +4,7 @@ import { t } from "../lib/strings.js"
 /**
  * @param {{ to?: string, size?: 'sm' | 'md' }} props
  */
-export function BrandLogo({ to = "/home", size = "md" }) {
+export function BrandLogo({ to = "/", size = "md" }) {
   const iconSize = size === "sm" ? "size-8" : "size-8"
   const textSize = size === "sm" ? "text-lg" : "text-xl"
 

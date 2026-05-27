@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link } from "react-router-dom"
+import { useAuth } from "../context/AuthContext.jsx"
 import { useLicense } from "../context/LicenseContext.jsx"
+import { EnrollmentConsentCard } from "../components/EnrollmentConsentCard.jsx"
 import { PrimaryButton } from "../components/PrimaryButton.jsx"
 import { StatusBadge } from "../components/StatusBadge.jsx"
 import { UiCard } from "../components/UiCard.jsx"
@@ -14,6 +16,7 @@ function toneForSlot(slot) {
 }
 
 export function SchedulePage() {
+  const { user } = useAuth()
   const { activeClass, catalog, setActiveClass } = useLicense()
   const [licenseClass, setLicenseClass] = useState(activeClass)
   const [slots, setSlots] = useState([])
@@ -22,7 +25,6 @@ export function SchedulePage() {
   const [slotType, setSlotType] = useState("theory_exam")
   const [myRegs, setMyRegs] = useState([])
   const [pendingSlot, setPendingSlot] = useState(null)
-  const [confirmChecked, setConfirmChecked] = useState(false)
 
   useEffect(() => {
     setLicenseClass(activeClass)
@@ -35,6 +37,7 @@ export function SchedulePage() {
       try {
         const data = await apiFetch(
           `/schedules?licenseClass=${licenseClass}&slotType=${slotType}`,
+          { auth: Boolean(user) },
         )
         if (!cancelled) setSlots(data)
       } finally {
@@ -45,7 +48,7 @@ export function SchedulePage() {
     return () => {
       cancelled = true
     }
-  }, [licenseClass, slotType])
+  }, [licenseClass, slotType, user])
 
   useEffect(() => {
     let cancelled = false
@@ -68,6 +71,16 @@ export function SchedulePage() {
     if (dates.length && !selectedDate) setSelectedDate(dates[0])
   }, [dates, selectedDate])
 
+  useEffect(() => {
+    if (dates.length === 0) {
+      if (selectedDate) setSelectedDate(null)
+      return
+    }
+    if (!selectedDate || !dates.includes(selectedDate)) {
+      setSelectedDate(dates[0])
+    }
+  }, [dates, selectedDate])
+
   const daySlots = slots.filter((s) => s.date === selectedDate)
 
   async function handleRegister(slotId) {
@@ -80,9 +93,9 @@ export function SchedulePage() {
       })
       setMessage(res?.message ?? "Đã gửi yêu cầu, chờ trung tâm xác nhận.")
       setPendingSlot(null)
-      setConfirmChecked(false)
       const data = await apiFetch(
         `/schedules?licenseClass=${licenseClass}&slotType=${slotType}`,
+        { auth: true },
       )
       setSlots(data)
       const regs = await apiFetch("/schedules/registrations/me", { auth: true })
@@ -203,40 +216,42 @@ export function SchedulePage() {
       ) : null}
 
       {pendingSlot ? (
-        <UiCard variant="panel" className="border-drive-action/40">
-          <h2 className="font-semibold text-white">{t("consent.scheduleTitle")}</h2>
-          <ul className="mt-2 list-inside list-disc text-sm text-drive-muted">
-            <li>{t("consent.scheduleBullet1")}</li>
-            <li>{t("consent.scheduleBullet2")}</li>
-          </ul>
-          <label className="mt-4 flex cursor-pointer items-start gap-3 text-sm text-drive-text">
-            <input
-              type="checkbox"
-              className="mt-1 accent-drive-action"
-              checked={confirmChecked}
-              onChange={(e) => setConfirmChecked(e.target.checked)}
-            />
-            <span>{t("consent.scheduleConfirm")}</span>
-          </label>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <PrimaryButton
-              variant="action"
-              disabled={!confirmChecked}
-              onClick={() => handleRegister(pendingSlot)}
-            >
-              Xác nhận đăng ký
-            </PrimaryButton>
-            <button
-              type="button"
-              className="rounded-drive-pill border border-drive-border px-4 py-2 text-sm text-drive-muted hover:text-white"
-              onClick={() => {
-                setPendingSlot(null)
-                setConfirmChecked(false)
-              }}
-            >
-              {t("common.cancel")}
-            </button>
-          </div>
+        <EnrollmentConsentCard
+          storageKey="drivego_consent_schedule_v1"
+          title={t("consent.scheduleTitle")}
+          bullets={[t("consent.scheduleBullet1"), t("consent.scheduleBullet2")]}
+          confirmLabel={t("consent.scheduleConfirm")}
+        >
+          <UiCard variant="panel" className="border-drive-action/40">
+            <div className="flex flex-wrap gap-2">
+              <PrimaryButton variant="action" onClick={() => handleRegister(pendingSlot)}>
+                Xác nhận đăng ký
+              </PrimaryButton>
+              <button
+                type="button"
+                className="rounded-drive-pill border border-drive-border px-4 py-2 text-sm text-drive-muted hover:text-white"
+                onClick={() => setPendingSlot(null)}
+              >
+                {t("common.cancel")}
+              </button>
+            </div>
+          </UiCard>
+        </EnrollmentConsentCard>
+      ) : null}
+
+      {user && !loading && slots.length === 0 ? (
+        <UiCard variant="panel">
+          <p className="text-sm text-drive-muted">
+            Chưa có ca thi tại trung tâm của bạn cho bộ lọc này. Nếu bạn chưa gắn trung tâm, cập nhật{" "}
+            <Link to="/profile" className="text-drive-action underline">
+              hồ sơ
+            </Link>{" "}
+            hoặc{" "}
+            <Link to="/application" className="text-drive-action underline">
+              hồ sơ sát hạch
+            </Link>
+            .
+          </p>
         </UiCard>
       ) : null}
 
@@ -291,7 +306,6 @@ export function SchedulePage() {
                         className="!py-1.5 !text-xs"
                         onClick={() => {
                           setPendingSlot(slot.id)
-                          setConfirmChecked(false)
                           setMessage(null)
                         }}
                       >

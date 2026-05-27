@@ -4,9 +4,11 @@ import { PageHeader } from "../components/PageHeader.jsx"
 import { PrimaryButton } from "../components/PrimaryButton.jsx"
 import { TextField } from "../components/TextField.jsx"
 import { UiCard } from "../components/UiCard.jsx"
+import { useAuth } from "../context/AuthContext.jsx"
 import {
   createAdminSlot,
   deleteAdminSlot,
+  fetchAdminCenters,
   fetchAdminSlots,
 } from "../lib/admin-api.js"
 
@@ -18,10 +20,14 @@ const EMPTY = {
   licenseClass: "B2",
   slotType: "theory_exam",
   capacity: 30,
+  centerId: "",
 }
 
 export function AdminScheduleSlotsPage() {
+  const { user } = useAuth()
+  const isSystemAdmin = user?.role === "system_admin"
   const [rows, setRows] = useState([])
+  const [centers, setCenters] = useState([])
   const [form, setForm] = useState(EMPTY)
   const [error, setError] = useState(null)
 
@@ -33,11 +39,21 @@ export function AdminScheduleSlotsPage() {
     reload()
   }, [])
 
+  useEffect(() => {
+    if (isSystemAdmin) {
+      fetchAdminCenters()
+        .then(setCenters)
+        .catch(() => setCenters([]))
+    }
+  }, [isSystemAdmin])
+
   async function handleCreate(e) {
     e.preventDefault()
     try {
-      await createAdminSlot(form)
-      setForm(EMPTY)
+      const payload = { ...form, capacity: Number(form.capacity) }
+      if (!isSystemAdmin) delete payload.centerId
+      await createAdminSlot(payload)
+      setForm({ ...EMPTY, centerId: form.centerId })
       reload()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Lỗi")
@@ -59,6 +75,24 @@ export function AdminScheduleSlotsPage() {
 
       <UiCard variant="panel">
         <form onSubmit={handleCreate} className="grid gap-3 sm:grid-cols-2">
+          {isSystemAdmin ? (
+            <label className="sm:col-span-2 block text-sm">
+              <span className="mb-2 block font-medium text-drive-text">Trung tâm</span>
+              <select
+                className="w-full rounded-drive border border-drive-border bg-drive-elevated px-3 py-2 text-white"
+                value={form.centerId}
+                onChange={(e) => setForm({ ...form, centerId: e.target.value })}
+                required
+              >
+                <option value="">— Chọn trung tâm —</option>
+                {centers.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           <TextField
             label="Ngày"
             type="date"
@@ -95,7 +129,7 @@ export function AdminScheduleSlotsPage() {
             onChange={(e) => setForm({ ...form, slotType: e.target.value })}
           >
             <option value="theory_exam">Thi lý thuyết</option>
-            <option value="practice_exam">Chạy thử</option>
+            <option value="road_test">Chạy thử / thực hành</option>
           </select>
           <TextField
             label="Sức chứa"
@@ -116,6 +150,7 @@ export function AdminScheduleSlotsPage() {
               <th className="py-2 text-left">Ngày</th>
               <th className="py-2 text-left">Giờ</th>
               <th className="py-2 text-left">Hạng</th>
+              <th className="py-2 text-left">Chỗ</th>
               <th className="py-2 text-left">Loại</th>
               <th className="py-2" />
             </tr>
@@ -123,11 +158,14 @@ export function AdminScheduleSlotsPage() {
           <tbody>
             {rows.map((s) => (
               <tr key={s.id} className="border-t border-drive-border-soft">
-                <td className="py-2 text-white">{s.slotDate}</td>
+                <td className="py-2 text-white">{s.date ?? s.slotDate}</td>
                 <td className="py-2 text-white">
                   {s.startTime}–{s.endTime}
                 </td>
                 <td className="py-2">{s.licenseClass}</td>
+                <td className="py-2 text-drive-muted">
+                  {s.heldSeats ?? s.registeredCount ?? 0}/{s.capacity}
+                </td>
                 <td className="py-2">{s.slotType}</td>
                 <td className="py-2 text-right">
                   <button

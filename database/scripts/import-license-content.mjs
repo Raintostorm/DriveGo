@@ -50,7 +50,7 @@ try {
   await client.connect()
 
   const licenseRow = await client.query(
-    `SELECT id FROM license_classes WHERE code = $1`,
+    `SELECT id, questions_per_exam, papers_count FROM license_classes WHERE code = $1`,
     [licenseCode],
   )
   if (licenseRow.rowCount === 0) {
@@ -58,6 +58,8 @@ try {
     process.exit(1)
   }
   const licenseClassId = licenseRow.rows[0].id
+  const expectedPerExam = Number(licenseRow.rows[0].questions_per_exam ?? 30)
+  const expectedPapers = Number(licenseRow.rows[0].papers_count ?? 20)
 
   await client.query(
     `DELETE FROM exam_attempts WHERE paper_id IN (SELECT id FROM exam_papers WHERE license_class = $1)`,
@@ -101,9 +103,27 @@ try {
   const papersPath = join(contentDir, "papers.json")
   const papersData = readJson(papersPath)
   if (papersData?.papers?.length) {
+    if (papersData.papers.length !== expectedPapers) {
+      console.warn(
+        `Warning: ${licenseCode} has ${papersData.papers.length} papers in JSON, catalog expects ${expectedPapers} (import continues).`,
+      )
+    }
     for (const paper of papersData.papers) {
       const paperId = paper.id ?? randomUUID()
       const questions = paper.questions ?? []
+      const declaredCount = paper.questionCount ?? questions.length
+      if (questions.length !== declaredCount) {
+        console.error(
+          `Paper #${paper.paperNumber}: questions.length (${questions.length}) !== questionCount (${declaredCount})`,
+        )
+        process.exit(1)
+      }
+      if (questions.length !== expectedPerExam) {
+        console.error(
+          `Paper #${paper.paperNumber}: expected ${expectedPerExam} questions for ${licenseCode}, got ${questions.length}`,
+        )
+        process.exit(1)
+      }
       await client.query(
         `INSERT INTO exam_papers (id, license_class, paper_number, question_count, is_mock)
          VALUES ($1, $2, $3, $4, $5)
@@ -116,7 +136,7 @@ try {
           paperId,
           licenseCode,
           paper.paperNumber,
-          paper.questionCount ?? questions.length,
+          questions.length,
           paper.isMock ?? true,
         ],
       )

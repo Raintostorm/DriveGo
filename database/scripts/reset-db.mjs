@@ -70,6 +70,7 @@ const MIGRATIONS = [
   "database/migrations/009_admin_ops.sql",
   "database/migrations/010_content_admin.sql",
   "database/migrations/011_class_sessions.sql",
+  "database/migrations/012_exam_rules.sql",
 ]
 
 async function applyMigrations(client) {
@@ -90,19 +91,22 @@ async function main() {
   console.log("Reset DriveGo DB:", url.replace(/:[^:@]+@/, ":****@"))
 
   try {
-    console.log("\n1/4 Truncate all tables...")
+    console.log("\n1/5 Truncate all tables...")
     await truncateAll(client)
 
-    console.log("\n2/4 Re-apply migrations (idempotent)...")
+    console.log("\n2/5 Re-apply migrations (idempotent)...")
     await applyMigrations(client)
   } finally {
     await client.end()
   }
 
-  console.log("\n3/4 Seed demo accounts...")
+  console.log("\n3/5 Seed demo accounts...")
   await runNpm("seed:db")
 
-  console.log("\n4/4 Import A1–B2 content (chapters + exam papers)...")
+  console.log("\n4/5 Bootstrap content JSON (A2 from A1, B1 from B2)...")
+  await runNpm("bootstrap:content")
+
+  console.log("\n5/5 Import A1–B2 content (chapters + exam papers)...")
   await runNpm("import:content:all")
 
   console.log("\nReset completed.")

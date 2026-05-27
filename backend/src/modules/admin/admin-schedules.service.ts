@@ -5,8 +5,12 @@ import {
   NotFoundException,
 } from "@nestjs/common"
 import { InjectRepository } from "@nestjs/typeorm"
-import { In, Repository } from "typeorm"
-import { ExamRegistration, ScheduleSlot } from "../../entities/schedule-slot.entity"
+import { DataSource, In, Repository } from "typeorm"
+import {
+  ExamRegistration,
+  ScheduleSlot,
+  TrainingCenter,
+} from "../../entities/schedule-slot.entity"
 import { StudentProfile } from "../../entities/student-profile.entity"
 import { AuthUser } from "../auth/jwt.strategy"
 import { NotificationsService } from "../notifications/notifications.service"
@@ -23,6 +27,9 @@ export class AdminSchedulesService {
     private readonly registrationsRepo: Repository<ExamRegistration>,
     @InjectRepository(StudentProfile)
     private readonly profilesRepo: Repository<StudentProfile>,
+    @InjectRepository(TrainingCenter)
+    private readonly centersRepo: Repository<TrainingCenter>,
+    private readonly dataSource: DataSource,
     private readonly scope: AdminScopeService,
     private readonly notifications: NotificationsService,
   ) {}
@@ -78,36 +85,70 @@ export class AdminSchedulesService {
     id: string,
     dto: PatchRegistrationAdminDto,
   ) {
-    const reg = await this.registrationsRepo.findOne({
-      where: { id },
-      relations: { slot: true },
-    })
-    if (!reg) throw new NotFoundException("Không tìm thấy đăng ký")
-    await this.scope.assertCenterAccessAsync(admin, reg.slot?.centerId)
+    const notifyPayload = await this.dataSource.transaction(async (manager) => {
+      const regRepo = manager.getRepository(ExamRegistration)
+      const slotRepo = manager.getRepository(ScheduleSlot)
+      const reg = await regRepo
+        .createQueryBuilder("r")
+        .leftJoinAndSelect("r.slot", "s")
+        .setLock("pessimistic_write")
+        .where("r.id = :id", { id })
+        .getOne()
+      if (!reg) throw new NotFoundException("Không tìm thấy đăng ký")
+      await this.scope.assertCenterAccessAsync(admin, reg.slot?.centerId)
 
-    if (reg.status !== "pending") {
-      throw new BadRequestException("Chỉ xử lý đăng ký đang chờ duyệt")
-    }
-
-    const slot = reg.slot ?? (await this.slotsRepo.findOne({ where: { id: reg.slotId } }))
-    if (!slot) throw new NotFoundException("Không tìm thấy ca")
-
-    if (dto.status === "confirmed") {
-      if (slot.registeredCount >= slot.capacity) {
-        throw new ConflictException("Ca thi đã đầy")
+      if (reg.status !== "pending") {
+        throw new BadRequestException("Chỉ xử lý đăng ký đang chờ duyệt")
       }
-      reg.status = "confirmed"
-      slot.registeredCount += 1
-      await this.slotsRepo.save(slot)
-      await this.notifications.createForUser(reg.userId, {
+
+      const slot =
+        reg.slot ??
+        (await slotRepo
+          .createQueryBuilder("s")
+          .setLock("pessimistic_write")
+          .where("s.id = :slotId", { slotId: reg.slotId })
+          .getOne())
+      if (!slot) throw new NotFoundException("Không tìm thấy ca")
+
+      if (dto.status === "confirmed") {
+        const held = await regRepo.count({
+          where: { slotId: slot.id, status: In(["pending", "confirmed"]) },
+        })
+        if (held > slot.capacity) {
+          throw new ConflictException("Ca thi đã đầy (vượt sức chứa sau khi có đăng ký chờ)")
+        }
+        reg.status = "confirmed"
+        slot.registeredCount += 1
+        await slotRepo.save(slot)
+      } else {
+        reg.status = "rejected"
+      }
+
+      reg.adminNote = dto.adminNote ?? reg.adminNote
+      reg.reviewedAt = new Date()
+      reg.reviewedBy = admin.userId
+      await regRepo.save(reg)
+
+      return {
+        id: reg.id,
+        status: reg.status,
+        userId: reg.userId,
+        slotDate: slot.slotDate,
+        startTime: slot.startTime,
+      }
+    })
+
+    if (notifyPayload.status === "confirmed") {
+      await this.notifications.createForUser(notifyPayload.userId, {
         type: "schedule_confirmed",
         title: "Đăng ký ca thi đã được xác nhận",
-        body: dto.adminNote ?? `Ca ${slot.slotDate} ${String(slot.startTime).slice(0, 5)}`,
+        body:
+          dto.adminNote ??
+          `Ca ${notifyPayload.slotDate} ${String(notifyPayload.startTime).slice(0, 5)}`,
         actionUrl: "/schedule",
       })
     } else {
-      reg.status = "rejected"
-      await this.notifications.createForUser(reg.userId, {
+      await this.notifications.createForUser(notifyPayload.userId, {
         type: "schedule_rejected",
         title: "Đăng ký ca thi bị từ chối",
         body: dto.adminNote ?? "Vui lòng chọn ca khác hoặc liên hệ trung tâm",
@@ -115,12 +156,7 @@ export class AdminSchedulesService {
       })
     }
 
-    reg.adminNote = dto.adminNote ?? reg.adminNote
-    reg.reviewedAt = new Date()
-    reg.reviewedBy = admin.userId
-    await this.registrationsRepo.save(reg)
-
-    return { id: reg.id, status: reg.status }
+    return { id: notifyPayload.id, status: notifyPayload.status }
   }
 
   async listSlots(admin: AuthUser, slotType?: string, date?: string) {
@@ -136,27 +172,57 @@ export class AdminSchedulesService {
     if (centerId) qb.andWhere("s.center_id = :centerId", { centerId })
 
     const slots = await qb.getMany()
-    return slots.map((s) => ({
-      id: s.id,
-      slotType: s.slotType,
-      date: s.slotDate,
-      startTime: s.startTime,
-      endTime: s.endTime,
-      venue: s.venue,
-      licenseClass: s.licenseClass,
-      capacity: s.capacity,
-      registeredCount: s.registeredCount,
-      centerName: s.center?.name,
-    }))
+    const slotIds = slots.map((s) => s.id)
+    const heldRows =
+      slotIds.length > 0
+        ? await this.registrationsRepo
+            .createQueryBuilder("r")
+            .select("r.slot_id", "slotId")
+            .addSelect("COUNT(*)", "cnt")
+            .where("r.slot_id IN (:...slotIds)", { slotIds })
+            .andWhere("r.status IN (:...statuses)", {
+              statuses: ["pending", "confirmed"],
+            })
+            .groupBy("r.slot_id")
+            .getRawMany<{ slotId: string; cnt: string }>()
+        : []
+    const heldBySlot = new Map(heldRows.map((r) => [r.slotId, Number(r.cnt)]))
+
+    return slots.map((s) => {
+      const heldSeats = heldBySlot.get(s.id) ?? 0
+      return {
+        id: s.id,
+        slotType: s.slotType,
+        date: s.slotDate,
+        startTime: s.startTime,
+        endTime: s.endTime,
+        venue: s.venue,
+        licenseClass: s.licenseClass,
+        capacity: s.capacity,
+        registeredCount: s.registeredCount,
+        heldSeats,
+        remaining: Math.max(0, s.capacity - heldSeats),
+        centerName: s.center?.name,
+      }
+    })
   }
 
   async createSlot(admin: AuthUser, dto: CreateSlotAdminDto) {
     let centerId = await this.scope.getCenterIdForAdmin(admin)
-    if (admin.role === "system_admin" && !centerId) {
-      centerId = null
+    if (!centerId) {
+      if (admin.role === "system_admin") {
+        if (!dto.centerId) {
+          throw new BadRequestException("System admin cần chọn centerId khi tạo ca thi")
+        }
+        centerId = dto.centerId
+      } else {
+        throw new BadRequestException("Tài khoản trung tâm chưa gắn center_id")
+      }
     }
+    const center = await this.centersRepo.findOne({ where: { id: centerId } })
+    if (!center) throw new NotFoundException("Không tìm thấy trung tâm")
     const slot = this.slotsRepo.create({
-      centerId: centerId ?? undefined,
+      centerId,
       slotDate: dto.slotDate,
       startTime: dto.startTime,
       endTime: dto.endTime,

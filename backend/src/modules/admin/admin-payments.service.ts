@@ -43,7 +43,7 @@ export class AdminPaymentsService {
         "pay.license_class AS license_class",
         "pay.amount AS amount",
         "pay.status AS status",
-        "pay.payment_code AS payment_code",
+        "pay.customer_info ->> 'paymentCode' AS payment_code",
         "pay.created_at AS created_at",
         "u.email AS email",
         "p.full_name AS full_name",

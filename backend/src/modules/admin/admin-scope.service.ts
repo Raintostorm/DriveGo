@@ -14,7 +14,10 @@ export class AdminScopeService {
   async getCenterIdForAdmin(user: AuthUser): Promise<string | null> {
     if (user.role === "system_admin") return null
     const row = await this.usersRepo.findOne({ where: { id: user.userId } })
-    return row?.centerId ?? null
+    if (!row?.centerId) {
+      throw new ForbiddenException("Tài khoản trung tâm chưa gắn center_id")
+    }
+    return row.centerId
   }
 
   async assertCenterAccessAsync(admin: AuthUser, resourceCenterId?: string | null) {

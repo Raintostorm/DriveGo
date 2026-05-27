@@ -5,6 +5,10 @@
 **Repo:** https://github.com/Raintostorm/DriveGo.git  
 **Monorepo:** `frontend/` (React+Vite), `backend/` (NestJS), `database/` (PG scripts)
 
+**Ranh giới role & hai loại lịch:** xem [roles-and-schedules.md](./roles-and-schedules.md).
+
+**Landing:** `http://localhost:5173/` = trang chủ marketing (`HomePage`).
+
 ---
 
 ## 1. Luồng học viên (đã chốt)
@@ -147,26 +151,30 @@ Scope trung tâm: `admin-scope.service.ts` (center_admin chỉ thấy `center_id
 
 ---
 
-## 5. Nội dung A1–B2 (600 câu → 20 đề / hạng)
+## 5. Nội dung A1–B2 (tách ngân hàng & quy tắc thi)
 
-| Hạng | Video (chapters) | Đề thi |
-|------|------------------|--------|
-| A1, A2, B1, B2 | 4 chương YouTube / hạng | 20 đề × ~30 câu (ngân hàng **chung** từ B2, MVP) |
+| Hạng | Ngân hàng | Đề | Câu/đề | Đạt | Phút |
+|------|-----------|-----|--------|-----|------|
+| A1, A2 | 250 câu (PDF xe máy) | 10 | 25 | 21/25 | 19 |
+| B1, B2 | 600 câu (PDF ô tô) | 20 | 30 | 26/30 | 22 |
 
-- Parse PDF: `database/scripts/parse-b2-pdf.py` → `database/content/B2/papers.json`
-- Bootstrap A1/A2/B1: `database/scripts/bootstrap-license-content.mjs`
-- Import DB: `npm run import:content:all`
-- **599 câu** — PDF thiếu câu 507 (506→508); ảnh `/content/B2/images/`
+- `parse:b2-pdf` → `database/content/B2/`
+- `parse:motor-pdf` → `database/content/A1/` (A2 bootstrap clone + ảnh riêng)
+- `bootstrap:content` — B1 đề từ B2; không clone B2 sang A1/A2
+- `migrate:exam-rules` — cột `license_classes.*`
+- API `GET /license-classes` trả `examRules`; thi không lộ `correctIndex`
 
 ```bash
 pip install -r database/scripts/requirements-pdf.txt
 npm run parse:b2-pdf
+npm run parse:motor-pdf
 npm run seed:db
-npm run reset:db   # truncate + migrate + seed + import:content:all (DB local)
+npm run bootstrap:content
+npm run migrate:exam-rules
 npm run import:content:all
 ```
 
-Seed **không** còn 2 đề demo — chỉ dùng import.
+Chi tiết: [database/content/README.md](../database/content/README.md).
 
 ---
 

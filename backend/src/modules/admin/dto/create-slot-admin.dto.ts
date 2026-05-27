@@ -1,6 +1,10 @@
-import { IsIn, IsInt, IsOptional, IsString, Min } from "class-validator"
+import { IsIn, IsInt, IsOptional, IsString, IsUUID, Min } from "class-validator"
 
 export class CreateSlotAdminDto {
+  @IsOptional()
+  @IsUUID()
+  centerId?: string
+
   @IsString()
   slotDate!: string
 

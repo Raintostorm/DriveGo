@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
+import { AdminScopeBanner } from "../components/AdminScopeBanner.jsx"
 import { PageHeader } from "../components/PageHeader.jsx"
 import { StatCard } from "../components/StatCard.jsx"
 import { UiCard } from "../components/UiCard.jsx"
@@ -10,10 +11,10 @@ import { t } from "../lib/strings.js"
 const QUICK_LINKS = [
   { to: "/admin/applications", title: "Hồ sơ sát hạch", desc: "Duyệt và yêu cầu nộp lại hồ sơ." },
   { to: "/admin/students", title: "Học viên", desc: "Danh sách và chi tiết học viên trung tâm." },
-  { to: "/admin/schedules", title: "Đăng ký ca thi", desc: "Xác nhận đăng ký lịch thi." },
-  { to: "/admin/schedules/slots", title: "Quản lý ca", desc: "Tạo và chỉnh sửa ca thi." },
-  { to: "/admin/class-sessions", title: "Buổi học", desc: "Lịch lớp và điểm danh." },
-  { to: "/admin/courses", title: "Khóa học", desc: "Chương học và học phí theo hạng." },
+  { to: "/admin/schedules", title: "Duyệt đăng ký ca thi", desc: "Xác nhận yêu cầu đăng ký ca sát hạch." },
+  { to: "/admin/schedules/slots", title: "Quản lý ca thi", desc: "Tạo ca lý thuyết / chạy thử." },
+  { to: "/admin/class-sessions", title: "Buổi học & điểm danh", desc: "Lịch lớp và check-in học viên." },
+  { to: "/admin/courses", title: "Nội dung khóa", desc: "Xem chương và học phí theo hạng.", systemOnly: false },
 ]
 
 export function AdminDashboardPage() {
@@ -39,6 +40,10 @@ export function AdminDashboardPage() {
         title={t("pages.adminDashboard.title")}
         subtitle={`${centerLabel} · DriveGo Admin`}
       />
+
+      <div className="mt-4">
+        <AdminScopeBanner />
+      </div>
 
       {error ? (
         <UiCard variant="panel" className="mt-4">
@@ -70,7 +75,9 @@ export function AdminDashboardPage() {
       </div>
 
       <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {QUICK_LINKS.map((item) => (
+        {QUICK_LINKS.filter(
+          (item) => !item.systemOnly || user?.role === "system_admin",
+        ).map((item) => (
           <UiCard key={item.to} variant="panel">
             <h2 className="font-semibold text-white">{item.title}</h2>
             <p className="mt-2 text-sm text-drive-muted">{item.desc}</p>

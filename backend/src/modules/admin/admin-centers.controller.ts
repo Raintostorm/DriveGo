@@ -3,6 +3,8 @@ import { Roles } from "../../common/decorators/roles.decorator"
 import { RolesGuard } from "../../common/guards/roles.guard"
 import { JwtAuthGuard } from "../auth/jwt-auth.guard"
 import { AdminCentersService } from "./admin-centers.service"
+import { CreateCenterAdminDto } from "./dto/create-center-admin.dto"
+import { UpdateCenterAdminDto } from "./dto/update-center-admin.dto"
 
 @Controller("admin/centers")
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -16,12 +18,12 @@ export class AdminCentersController {
   }
 
   @Post()
-  create(@Body() body: { name: string; taxCode?: string; city?: string; address?: string }) {
+  create(@Body() body: CreateCenterAdminDto) {
     return this.service.create(body)
   }
 
   @Patch(":id")
-  update(@Param("id") id: string, @Body() body: Record<string, string>) {
+  update(@Param("id") id: string, @Body() body: UpdateCenterAdminDto) {
     return this.service.update(id, body)
   }
 }

@@ -128,8 +128,11 @@ export function TheoryPage() {
             >
               {t("pages.theory.startNow")}
             </PrimaryButton>
-            <Link to="/exam">
-              <PrimaryButton variant="outline">Thi thử ngay</PrimaryButton>
+            <Link
+              to="/exam"
+              className="rounded-drive-pill border border-drive-border bg-drive-elevated px-6 py-3 text-sm font-bold text-white transition hover:bg-drive-panel"
+            >
+              Thi thử ngay
             </Link>
           </div>
         </UiCard>

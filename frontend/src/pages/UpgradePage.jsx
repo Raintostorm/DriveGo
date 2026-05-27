@@ -78,11 +78,17 @@ function PremiumMemberView({ user }) {
         </ul>
 
         <div className="mt-8 flex flex-wrap gap-3">
-          <Link to="/ai-chat">
-            <PrimaryButton variant="action">{t("pages.upgrade.openAiChat")}</PrimaryButton>
+          <Link
+            to="/ai-chat"
+            className="rounded-drive-pill bg-drive-action px-6 py-3 text-sm font-bold text-white shadow-drive-action transition hover:brightness-110"
+          >
+            {t("pages.upgrade.openAiChat")}
           </Link>
-          <Link to="/exam">
-            <PrimaryButton variant="outline">{t("pages.upgrade.openExam")}</PrimaryButton>
+          <Link
+            to="/exam"
+            className="rounded-drive-pill border border-drive-border bg-drive-elevated px-6 py-3 text-sm font-bold text-white transition hover:bg-drive-panel"
+          >
+            {t("pages.upgrade.openExam")}
           </Link>
         </div>
       </UiCard>

@@ -1,120 +1,60 @@
 # Nạp nội dung theo hạng GPLX
 
-Thư mục này dùng với script `import-license-content.mjs`. Mỗi hạng một folder:
+Mỗi hạng một folder dưới `database/content/`. Quy tắc thi (số câu/đề, thời gian, điểm đạt) nằm trong bảng `license_classes` — migration `012_exam_rules.sql`.
 
-```
-database/content/
-  A1/
-    chapters.json
-    papers.json
-    articles.json   (tùy chọn)
-  A2/
-  B1/
-  B2/
-```
+| Hạng | Ngân hàng | Đề thi | Câu/đề | Đạt | Thời gian |
+|------|-----------|--------|--------|-----|-----------|
+| A1, A2 | 250 câu (xe máy) | 10 đề | 25 | 21/25 | 19 phút |
+| B1, B2 | 600 câu (ô tô) | 20 đề | 30 | 26/30 | 22 phút |
 
-## `chapters.json`
+A1 và A2 dùng **cùng** bộ 250 câu; A2 clone từ A1 khi bootstrap (ảnh `/content/A2/images/`).
 
-```json
-{
-  "chapters": [
-    {
-      "id": "optional-uuid",
-      "title": "Chương 1: ...",
-      "sortOrder": 1,
-      "durationMinutes": 45,
-      "videoUrl": "https://www.youtube-nocookie.com/embed/VIDEO_ID?rel=0",
-      "description": "Mô tả ngắn"
-    }
-  ]
-}
-```
-
-## `papers.json`
-
-```json
-{
-  "papers": [
-    {
-      "id": "optional-uuid",
-      "paperNumber": 1,
-      "questionCount": 10,
-      "isMock": true,
-      "questions": [
-        {
-          "body": "Câu hỏi?",
-          "answers": ["A", "B", "C", "D"],
-          "correctIndex": 0,
-          "isCritical": false,
-          "imageUrl": null
-        }
-      ]
-    }
-  ]
-}
-```
-
-## `articles.json` (tùy chọn)
-
-```json
-{
-  "articles": [
-    {
-      "slug": "huong-dan-a1",
-      "title": "...",
-      "body": "...",
-      "category": "ly-thuyet",
-      "licenseClass": "A1"
-    }
-  ]
-}
-```
-
-`licenseClass: null` hoặc bỏ field = tài liệu chung (hiện với mọi hạng).
-
-## Parse PDF 600 câu (B2)
-
-Đặt file PDF chính thức ở thư mục gốc project, cài PyMuPDF rồi chạy:
+## Luồng đầy đủ
 
 ```bash
 pip install -r database/scripts/requirements-pdf.txt
+
+# PDF 600 câu (B*.pdf) ở thư mục gốc repo
 npm run parse:b2-pdf
-```
 
-Script tạo `database/content/B2/papers.json`, ảnh trong `images/` và copy sang `frontend/public/content/B2/images/` (URL `/content/B2/images/cau-XXX.png`).
+# PDF 250 câu (*250*.pdf hoặc *A1*.pdf) ở thư mục gốc repo
+npm run parse:motor-pdf
 
-**Lưu ý:** bản PDF CSGT 2025 hiện thiếu **Câu 507** (nhảy từ 506 → 508); log nằm ở `database/content/B2/parse-log.txt`.
-
-## Admin portal (hồ sơ & lịch)
-
-```bash
-npm run migrate:admin
-```
-
-Đăng nhập: `center@drivego.demo` hoặc `admin@drivego.demo` · mật khẩu `DriveGo123!`
-
-- `/admin-dashboard` — tổng quan
-- `/admin/applications` — tải & duyệt hồ sơ
-- `/admin/schedules` — xác nhận ca lý thuyết / chạy thử
-
-## Nội dung A1–B2 (MVP — dùng chung 600 câu)
-
-Sau `parse:b2-pdf`, chạy một lệnh để sinh folder A1/A2/B1 và import cả 4 hạng:
-
-```bash
 npm run seed:db
-npm run bootstrap:content      # chỉ sinh JSON (A1/A2/B1 từ B2)
-npm run import:content:all     # bootstrap + import PostgreSQL
+npm run bootstrap:content
+npm run migrate:exam-rules
+npm run import:content:all
 ```
 
-- Mỗi hạng: **4 chương** YouTube + **20 đề × ~30 câu** (tổng ~599 câu, thiếu câu 507 trong PDF).
-- Ảnh đề dùng chung `/content/B2/images/` (không copy PNG sang A1/A2/B1).
+Hoặc: `npm run reset:db` (truncate + migrations + seed + import).
 
-## Chạy import từng hạng
+## `papers.json`
+
+- **A1:** từ `parse:motor-pdf` — không bootstrap ghi đè.
+- **A2:** bootstrap clone từ A1 (đổi ID + path ảnh).
+- **B2:** từ `parse:b2-pdf` + bootstrap gán stable IDs.
+- **B1:** bootstrap clone đề từ B2 (30 câu/đề).
+
+Import **validate** số câu/đề theo `license_classes.questions_per_exam`.
+
+## Parse PDF
+
+| Lệnh | Output |
+|------|--------|
+| `npm run parse:b2-pdf` | `database/content/B2/`, ảnh `/content/B2/images/` |
+| `npm run parse:motor-pdf` | `database/content/A1/`, ảnh `/content/A1/images/` |
+
+Log parse: `database/content/B2/parse-log.txt`, `database/content/A1/parse-log.txt`.
+
+## Import từng hạng
 
 ```bash
 npm run import:content -- A1 database/content/A1
 npm run import:content -- B2 database/content/B2
 ```
 
-Import xóa `exam_papers` / `questions` cũ **cùng hạng** rồi nạp lại (tránh đề demo seed).
+Import xóa đề/câu hỏi cũ **cùng hạng** rồi nạp lại.
+
+## Env (backend, tùy chọn)
+
+Ghi đè quy tắc thi: `EXAM_PASS_MIN_A1`, `EXAM_DURATION_MINUTES_B2`, `FREE_EXAM_ATTEMPT_LIMIT` — xem `backend/.env.example`.

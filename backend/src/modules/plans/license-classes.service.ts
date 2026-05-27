@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common"
 import { InjectRepository } from "@nestjs/typeorm"
 import { In, Repository } from "typeorm"
+import { ExamRulesService } from "../../common/exam-rules.service"
 import {
   DEFAULT_LICENSE_CLASS,
   LICENSE_LABELS,
@@ -14,6 +15,7 @@ import { StudyChapter } from "../../entities/study-chapter.entity"
 @Injectable()
 export class LicenseClassesService {
   constructor(
+    private readonly examRules: ExamRulesService,
     @InjectRepository(LicenseClass)
     private readonly licenseRepo: Repository<LicenseClass>,
     @InjectRepository(StudyChapter)
@@ -90,6 +92,7 @@ export class LicenseClassesService {
         hasExamPapers: examCount > 0,
         hasScheduleSlots: scheduleCount > 0,
         featured: code === DEFAULT_LICENSE_CLASS,
+        examRules: row ? this.examRules.toCatalogPayload(row) : null,
       }
     })
   }

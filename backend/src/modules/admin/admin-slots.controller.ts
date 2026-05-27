@@ -4,6 +4,8 @@ import { RolesGuard } from "../../common/guards/roles.guard"
 import { JwtAuthGuard } from "../auth/jwt-auth.guard"
 import { AuthUser } from "../auth/jwt.strategy"
 import { AdminSlotsService } from "./admin-slots.service"
+import { CreateSlotAdminDto } from "./dto/create-slot-admin.dto"
+import { UpdateSlotAdminDto } from "./dto/update-slot-admin.dto"
 
 @Controller("admin/schedule-slots")
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -17,17 +19,17 @@ export class AdminSlotsController {
   }
 
   @Post()
-  create(@Req() req: { user: AuthUser }, @Body() body: Record<string, unknown>) {
-    return this.service.create(req.user, body as Parameters<AdminSlotsService["create"]>[1])
+  create(@Req() req: { user: AuthUser }, @Body() body: CreateSlotAdminDto) {
+    return this.service.create(req.user, body)
   }
 
   @Patch(":id")
   update(
     @Req() req: { user: AuthUser },
     @Param("id") id: string,
-    @Body() body: Record<string, unknown>,
+    @Body() body: UpdateSlotAdminDto,
   ) {
-    return this.service.update(req.user, id, body as never)
+    return this.service.update(req.user, id, body)
   }
 
   @Delete(":id")

@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { PageHeader } from "../components/PageHeader.jsx"
-import { PrimaryButton } from "../components/PrimaryButton.jsx"
 import { StatCard } from "../components/StatCard.jsx"
 import { StatusBadge } from "../components/StatusBadge.jsx"
 import { UiCard } from "../components/UiCard.jsx"
@@ -97,7 +96,7 @@ export function HistoryPage() {
               Ôn lại chương biển báo và câu điểm liệt trước khi thi lại.
             </p>
             <div className="mt-4 flex h-24 items-end gap-1">
-              {rows.slice(0, 5).map((row, i) => {
+              {rows.slice(0, 5).map((row) => {
                 const [got, of] = row.score.split("/").map(Number)
                 const h = of ? Math.round((got / of) * 100) : 0
                 return (
@@ -111,10 +110,11 @@ export function HistoryPage() {
               })}
             </div>
           </UiCard>
-          <Link to="/exam">
-            <PrimaryButton variant="action" fullWidth>
-              {t("pages.history.startReview")}
-            </PrimaryButton>
+          <Link
+            to="/exam"
+            className="block w-full rounded-drive-pill bg-drive-action px-6 py-3 text-center text-sm font-bold text-white shadow-drive-action transition hover:brightness-110"
+          >
+            {t("pages.history.startReview")}
           </Link>
         </aside>
       </div>

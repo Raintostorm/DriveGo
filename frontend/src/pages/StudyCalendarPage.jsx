@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { Link } from "react-router-dom"
 import { PageHeader } from "../components/PageHeader.jsx"
 import { PrimaryButton } from "../components/PrimaryButton.jsx"
 import { UiCard } from "../components/UiCard.jsx"
@@ -72,9 +73,18 @@ export function StudyCalendarPage() {
                 </li>
               ))}
             </ul>
-          ) : (
-            <p className="mt-3 text-sm text-drive-muted">Chưa có buổi học sắp tới.</p>
-          )}
+          ) : !loading ? (
+            <div className="mt-3 space-y-2 text-sm text-drive-muted">
+              <p>Chưa có buổi học sắp tới tại trung tâm của bạn.</p>
+              <p>
+                Nếu bạn mới đăng ký, hãy cập nhật{" "}
+                <Link to="/profile" className="text-drive-action underline">
+                  hồ sơ
+                </Link>{" "}
+                để gắn trung tâm đào tạo.
+              </p>
+            </div>
+          ) : null}
         </UiCard>
 
         <UiCard variant="panel">

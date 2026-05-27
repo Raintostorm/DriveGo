@@ -1,21 +1,24 @@
 /**
- * Generate chapters.json + papers.json for A1, A2, B1 from B2 source.
- * B2 papers.json gets stable paper IDs if missing.
+ * Bootstrap content folders:
+ * - B2: stable paper IDs (requires papers.json from parse:b2-pdf)
+ * - B1: clone exam papers from B2, custom chapters
+ * - A1: chapters only (papers from parse:motor-pdf)
+ * - A2: clone papers from A1 + copy images
  *
  * Usage: npm run bootstrap:content
  */
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs"
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "fs"
 import { join, resolve } from "path"
 import { fileURLToPath } from "url"
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url))
 const ROOT = resolve(__dirname, "../..")
 const B2_DIR = join(ROOT, "database/content/B2")
+const A1_DIR = join(ROOT, "database/content/A1")
 
 const CLASS_META = {
   A1: {
     chapterPrefix: "44444444-4444-4444-8441",
-    paperPrefix: "55555555-5555-4555-8501",
     label: "xe máy A1",
     chapterTitles: [
       "Chương 1: Biển báo & hiệu lệnh (A1)",
@@ -27,7 +30,7 @@ const CLASS_META = {
       "Biển báo và quy tắc cơ bản cho bằng A1.",
       "Ưu tiên, làn đường và khoảng cách khi điều khiển xe máy.",
       "Thao tác an toàn ban ngày/đêm và thời tiết xấu.",
-      "Luyện 600 câu lý thuyết (đề thi thử).",
+      "Luyện 250 câu lý thuyết (đề thi thử).",
     ],
   },
   A2: {
@@ -44,7 +47,7 @@ const CLASS_META = {
       "Nhận biết biển báo cho hạng A2.",
       "Quy tắc ưu tiên và an toàn giao thông.",
       "Kỹ thuật lái xe máy trong đô thị.",
-      "Luyện 600 câu lý thuyết (đề thi thử).",
+      "Luyện 250 câu lý thuyết (đề thi thử).",
     ],
   },
   B1: {
@@ -89,16 +92,34 @@ function chapterId(prefix, sortOrder) {
   return `${prefix}-44444444440${sortOrder}`
 }
 
-function readB2Papers() {
-  const path = join(B2_DIR, "papers.json")
-  if (!existsSync(path)) {
-    console.error("Missing database/content/B2/papers.json — run parse:b2-pdf first.")
-    process.exit(1)
-  }
+function readJson(path) {
   return JSON.parse(readFileSync(path, "utf8"))
 }
 
-function clonePapersForClass(source, code) {
+function writeJson(dir, name, data) {
+  mkdirSync(dir, { recursive: true })
+  writeFileSync(join(dir, name), `${JSON.stringify(data, null, 2)}\n`, "utf8")
+}
+
+function readB2Papers() {
+  const path = join(B2_DIR, "papers.json")
+  if (!existsSync(path)) {
+    console.error("Missing database/content/B2/papers.json — run npm run parse:b2-pdf first.")
+    process.exit(1)
+  }
+  return readJson(path)
+}
+
+function readA1Papers() {
+  const path = join(A1_DIR, "papers.json")
+  if (!existsSync(path)) {
+    console.error("Missing database/content/A1/papers.json — run npm run parse:motor-pdf first.")
+    process.exit(1)
+  }
+  return readJson(path)
+}
+
+function clonePapersForClass(source, code, imageFrom, imageTo) {
   const meta = CLASS_META[code]
   return {
     papers: source.papers.map((p) => ({
@@ -108,7 +129,9 @@ function clonePapersForClass(source, code) {
       isMock: p.isMock ?? true,
       questions: (p.questions ?? []).map((q) => ({
         ...q,
-        imageUrl: q.imageUrl ?? null,
+        imageUrl: q.imageUrl
+          ? q.imageUrl.replace(imageFrom, imageTo)
+          : null,
       })),
     })),
   }
@@ -116,7 +139,7 @@ function clonePapersForClass(source, code) {
 
 function buildChapters(code) {
   const meta = CLASS_META[code]
-  const b2Chapters = JSON.parse(readFileSync(join(B2_DIR, "chapters.json"), "utf8")).chapters
+  const b2Chapters = readJson(join(B2_DIR, "chapters.json")).chapters
 
   return {
     chapters: b2Chapters.map((ch, i) => ({
@@ -130,28 +153,63 @@ function buildChapters(code) {
   }
 }
 
-function writeJson(dir, name, data) {
-  mkdirSync(dir, { recursive: true })
-  writeFileSync(join(dir, name), `${JSON.stringify(data, null, 2)}\n`, "utf8")
+function copyA1ImagesToA2() {
+  const src = join(A1_DIR, "images")
+  const destDb = join(ROOT, "database/content/A2/images")
+  const destPublic = join(ROOT, "frontend/public/content/A2/images")
+  if (!existsSync(src)) {
+    console.warn("A1/images missing — skip image copy to A2")
+    return
+  }
+  mkdirSync(destDb, { recursive: true })
+  mkdirSync(destPublic, { recursive: true })
+  for (const name of readdirSync(src)) {
+    if (!name.endsWith(".png")) continue
+    cpSync(join(src, name), join(destDb, name))
+    cpSync(join(src, name), join(destPublic, name))
+  }
+  console.log("A2: copied images from A1")
 }
 
-const source = readB2Papers()
+const b2Source = readB2Papers()
 
-// B2: ensure stable paper IDs in papers.json
-const b2Papers = clonePapersForClass(source, "B2")
+// B2: stable IDs
+const b2Papers = clonePapersForClass(b2Source, "B2", "/content/B2/images", "/content/B2/images")
 writeJson(B2_DIR, "papers.json", b2Papers)
-console.log(`B2 papers.json: ${b2Papers.papers.length} papers (IDs assigned)`)
+console.log(`B2 papers.json: ${b2Papers.papers.length} papers`)
 
 if (!existsSync(join(B2_DIR, "chapters.json"))) {
   console.error("Missing B2/chapters.json")
   process.exit(1)
 }
 
-for (const code of ["A1", "A2", "B1"]) {
-  const dir = join(ROOT, "database/content", code)
-  writeJson(dir, "papers.json", clonePapersForClass(source, code))
-  writeJson(dir, "chapters.json", buildChapters(code))
-  console.log(`${code}: chapters + ${source.papers.length} papers written`)
+// A1: chapters only (papers from parse:motor-pdf)
+const a1Dir = join(ROOT, "database/content/A1")
+writeJson(a1Dir, "chapters.json", buildChapters("A1"))
+if (existsSync(join(a1Dir, "papers.json"))) {
+  console.log(`A1: kept papers.json from parse:motor-pdf`)
+} else {
+  console.warn("A1: no papers.json — run npm run parse:motor-pdf")
 }
 
-console.log("Bootstrap done. Run: npm run import:content:all")
+// A2: papers from A1
+const a2Dir = join(ROOT, "database/content/A2")
+const a1Source = existsSync(join(A1_DIR, "papers.json")) ? readA1Papers() : null
+if (a1Source) {
+  writeJson(
+    a2Dir,
+    "papers.json",
+    clonePapersForClass(a1Source, "A2", "/content/A1/images", "/content/A2/images"),
+  )
+  copyA1ImagesToA2()
+  console.log(`A2: ${a1Source.papers.length} papers from A1`)
+}
+writeJson(a2Dir, "chapters.json", buildChapters("A2"))
+
+// B1: papers from B2
+const b1Dir = join(ROOT, "database/content/B1")
+writeJson(b1Dir, "papers.json", clonePapersForClass(b2Source, "B1", "/content/B2/images", "/content/B2/images"))
+writeJson(b1Dir, "chapters.json", buildChapters("B1"))
+console.log(`B1: ${b2Source.papers.length} papers from B2`)
+
+console.log("Bootstrap done. Run: npm run migrate:exam-rules && npm run import:content:all")

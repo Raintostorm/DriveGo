@@ -16,7 +16,7 @@ function lazyNamed(importer, exportName) {
 /** @type {AppRoute[]} */
 export const routeConfig = [
   {
-    path: "/home",
+    path: "/",
     labelKey: "nav.home",
     group: "marketing",
     layout: "marketing",

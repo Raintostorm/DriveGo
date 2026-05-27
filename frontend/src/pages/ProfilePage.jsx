@@ -120,8 +120,11 @@ export function ProfilePage() {
             </div>
           </div>
           {!premium ? (
-            <Link to="/upgrade">
-              <PrimaryButton variant="outline">Nâng cấp Premium</PrimaryButton>
+            <Link
+              to="/upgrade"
+              className="rounded-drive-pill border border-drive-border bg-drive-elevated px-6 py-3 text-sm font-bold text-white transition hover:bg-drive-panel"
+            >
+              Nâng cấp Premium
             </Link>
           ) : null}
         </div>
@@ -193,16 +196,17 @@ export function ProfilePage() {
           ) : (
             <StatusBadge tone="neutral">Chưa tạo hồ sơ</StatusBadge>
           )}
-          <Link to="/application">
-            <PrimaryButton variant="action">
-              {!appStatus
-                ? "Nộp hồ sơ sát hạch"
-                : appStatus === "draft"
-                  ? "Tiếp tục nộp hồ sơ"
-                  : examEligible
-                    ? "Xem hồ sơ đã duyệt"
-                    : "Xem hồ sơ đã nộp"}
-            </PrimaryButton>
+          <Link
+            to="/application"
+            className="rounded-drive-pill bg-drive-action px-6 py-3 text-sm font-bold text-white shadow-drive-action transition hover:brightness-110"
+          >
+            {!appStatus
+              ? "Nộp hồ sơ sát hạch"
+              : appStatus === "draft"
+                ? "Tiếp tục nộp hồ sơ"
+                : examEligible
+                  ? "Xem hồ sơ đã duyệt"
+                  : "Xem hồ sơ đã nộp"}
           </Link>
         </div>
         {!examEligible && appStatus && appStatus !== "draft" ? (

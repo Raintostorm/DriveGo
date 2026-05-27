@@ -1,10 +1,11 @@
 import { ForbiddenException, Injectable } from "@nestjs/common"
+import { ConfigService } from "@nestjs/config"
 import { InjectRepository } from "@nestjs/typeorm"
 import { IsNull, Not, Repository } from "typeorm"
 import { ExamAttempt } from "../entities/exam-attempt.entity"
 import { StudentProfile } from "../entities/student-profile.entity"
 
-export const FREE_EXAM_ATTEMPT_LIMIT = 10
+export const DEFAULT_FREE_EXAM_ATTEMPT_LIMIT = 10
 
 @Injectable()
 export class PremiumService {
@@ -13,7 +14,15 @@ export class PremiumService {
     private readonly profilesRepo: Repository<StudentProfile>,
     @InjectRepository(ExamAttempt)
     private readonly attemptsRepo: Repository<ExamAttempt>,
+    private readonly config: ConfigService,
   ) {}
+
+  private freeExamLimit(): number {
+    const raw = this.config.get<string>("FREE_EXAM_ATTEMPT_LIMIT")
+    if (raw === undefined || raw === "") return DEFAULT_FREE_EXAM_ATTEMPT_LIMIT
+    const n = Number(raw)
+    return Number.isFinite(n) && n > 0 ? n : DEFAULT_FREE_EXAM_ATTEMPT_LIMIT
+  }
 
   async isPremium(userId: string): Promise<boolean> {
     const profile = await this.profilesRepo.findOne({ where: { userId } })
@@ -36,10 +45,11 @@ export class PremiumService {
 
   async assertCanSubmitExam(userId: string) {
     if (await this.isPremium(userId)) return
+    const limit = this.freeExamLimit()
     const count = await this.countFinishedAttempts(userId)
-    if (count >= FREE_EXAM_ATTEMPT_LIMIT) {
+    if (count >= limit) {
       throw new ForbiddenException(
-        `Tài khoản miễn phí chỉ được nộp tối đa ${FREE_EXAM_ATTEMPT_LIMIT} bài thi. Nâng cấp Premium để thi không giới hạn.`,
+        `Tài khoản miễn phí chỉ được nộp tối đa ${limit} bài thi. Nâng cấp Premium để thi không giới hạn.`,
       )
     }
   }

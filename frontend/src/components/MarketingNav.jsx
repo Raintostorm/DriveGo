@@ -5,7 +5,6 @@ import { isStaffRole } from "../lib/roles.js"
 import { t } from "../lib/strings.js"
 import { marketingRoutes, moreRoutes } from "../routes.jsx"
 import { BrandLogo } from "./BrandLogo.jsx"
-import { PrimaryButton } from "./PrimaryButton.jsx"
 
 const navLinkClass = ({ isActive }) =>
   `text-sm font-medium transition ${isActive ? "text-white" : "text-drive-muted hover:text-white"}`
@@ -34,7 +33,7 @@ export function MarketingNav() {
               key={path}
               to={path}
               className={navLinkClass}
-              end={path === "/home"}
+              end={path === "/"}
               onClick={() => setMoreOpen(false)}
             >
               {t(labelKey)}
@@ -80,8 +79,11 @@ export function MarketingNav() {
           <Link to="/login" className="hidden text-sm font-medium text-drive-muted hover:text-white sm:inline">
             {t("nav.login")}
           </Link>
-          <Link to="/register">
-            <PrimaryButton variant="action">{t("nav.register")}</PrimaryButton>
+          <Link
+            to="/register"
+            className="rounded-drive-pill bg-drive-action px-6 py-3 text-sm font-bold text-white shadow-drive-action transition hover:brightness-110"
+          >
+            {t("nav.register")}
           </Link>
         </div>
       </div>

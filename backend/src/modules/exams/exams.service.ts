@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common"
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common"
 import {
   DEFAULT_LICENSE_CLASS,
   isStudyLicenseCode,
@@ -6,6 +6,7 @@ import {
 import { InjectRepository } from "@nestjs/typeorm"
 import { Repository } from "typeorm"
 import { EnrollmentService } from "../../common/enrollment.service"
+import { ExamRulesService } from "../../common/exam-rules.service"
 import { PremiumService } from "../../common/premium.service"
 import { ExamAttempt } from "../../entities/exam-attempt.entity"
 import { ExamPaper } from "../../entities/exam-paper.entity"
@@ -23,6 +24,7 @@ export class ExamsService {
     private readonly attemptsRepo: Repository<ExamAttempt>,
     private readonly premium: PremiumService,
     private readonly enrollment: EnrollmentService,
+    private readonly examRules: ExamRulesService,
   ) {}
 
   async listPapers(userId: string, licenseClass?: string) {
@@ -33,6 +35,8 @@ export class ExamsService {
       where: { licenseClass: code },
       order: { paperNumber: "ASC" },
     })
+
+    const rules = await this.examRules.getRules(code)
 
     const mapped = papers.map((paper) => ({
       id: paper.id,
@@ -46,6 +50,7 @@ export class ExamsService {
     return {
       licenseClass: code,
       contentReady: mapped.length > 0,
+      examRules: rules,
       papers: mapped,
     }
   }
@@ -63,6 +68,8 @@ export class ExamsService {
       order: { id: "ASC" },
     })
 
+    const rules = await this.examRules.getRules(paper.licenseClass)
+
     return {
       id: paper.id,
       licenseClass: paper.licenseClass,
@@ -70,6 +77,7 @@ export class ExamsService {
       questionCount: paper.questionCount,
       isMock: paper.isMock,
       title: `Đề thi số ${String(paper.paperNumber).padStart(2, "0")}`,
+      examRules: rules,
       questions: questions.map((q, index) => ({
         id: q.id,
         index: index + 1,
@@ -77,7 +85,6 @@ export class ExamsService {
         imageUrl: q.imageUrl,
         answers: q.answers,
         isCritical: q.isCritical,
-        correctIndex: q.correctIndex,
       })),
     }
   }
@@ -95,6 +102,17 @@ export class ExamsService {
     if (questions.length === 0) {
       throw new NotFoundException("Đề thi chưa có câu hỏi")
     }
+
+    const answeredCount = questions.filter(
+      (q) => typeof dto.answers[q.id] === "number",
+    ).length
+    if (answeredCount < questions.length) {
+      throw new BadRequestException(
+        `Vui lòng trả lời đủ ${questions.length} câu trước khi nộp bài (đã trả lời ${answeredCount}).`,
+      )
+    }
+
+    const rules = await this.examRules.getRules(paper.licenseClass)
 
     let correct = 0
     let wrong = 0
@@ -121,8 +139,13 @@ export class ExamsService {
     }
 
     const total = questions.length
-    const passThreshold = Math.ceil(total * 0.8)
+    const passThreshold = rules.passMinCorrect
     const passed = !failedCritical && correct >= passThreshold
+
+    if (paper.questionCount !== total) {
+      paper.questionCount = total
+      await this.papersRepo.save(paper)
+    }
 
     const startedAt = dto.startedAt ? new Date(dto.startedAt) : new Date()
     const finishedAt = new Date()
@@ -134,7 +157,7 @@ export class ExamsService {
       finishedAt,
       score: correct,
       passed,
-      answers: { correct, wrong, detail },
+      answers: { correct, wrong, detail, failedCritical },
     })
     await this.attemptsRepo.save(attempt)
 
@@ -146,6 +169,7 @@ export class ExamsService {
       wrong,
       passed,
       passThreshold,
+      failedCritical,
       durationSeconds: Math.round((finishedAt.getTime() - startedAt.getTime()) / 1000),
     }
   }
@@ -157,36 +181,45 @@ export class ExamsService {
       order: { finishedAt: "DESC" },
     })
 
-    const rows = attempts.map((attempt) => {
-      const total = attempt.paper?.questionCount ?? attempt.score ?? 0
-      const finished = attempt.finishedAt ?? attempt.startedAt
-      const durationMs =
-        finished.getTime() -
-        attempt.startedAt.getTime()
-      const minutes = Math.floor(durationMs / 60000)
-      const seconds = Math.floor((durationMs % 60000) / 1000)
+    const rows = await Promise.all(
+      attempts.map(async (attempt) => {
+        const questionTotal = attempt.paperId
+          ? await this.questionsRepo.count({ where: { paperId: attempt.paperId } })
+          : 0
+        const total =
+          questionTotal > 0
+            ? questionTotal
+            : (attempt.paper?.questionCount ?? attempt.score ?? 0)
+        const finished = attempt.finishedAt ?? attempt.startedAt
+        const durationMs = finished.getTime() - attempt.startedAt.getTime()
+        const minutes = Math.floor(durationMs / 60000)
+        const seconds = Math.floor((durationMs % 60000) / 1000)
 
-      return {
-        id: attempt.id,
-        date: finished.toISOString(),
-        exam: attempt.paper
-          ? `Đề thi số ${String(attempt.paper.paperNumber).padStart(2, "0")}`
-          : "Đề thi",
-        rank: attempt.paper?.licenseClass ?? "B2",
-        score: `${attempt.score ?? 0}/${total}`,
-        pass: Boolean(attempt.passed),
-        time: `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`,
-      }
-    })
+        return {
+          id: attempt.id,
+          date: finished.toISOString(),
+          exam: attempt.paper
+            ? `Đề thi số ${String(attempt.paper.paperNumber).padStart(2, "0")}`
+            : "Đề thi",
+          rank: attempt.paper?.licenseClass ?? "B2",
+          score: `${attempt.score ?? 0}/${total}`,
+          pass: Boolean(attempt.passed),
+          time: `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`,
+        }
+      }),
+    )
 
     const totalExams = rows.length
     const passCount = rows.filter((r) => r.pass).length
     const passRate = totalExams ? Math.round((passCount / totalExams) * 100) : 0
-    const bestScore = rows.reduce((best, row) => {
-      const [got, of] = row.score.split("/").map(Number)
-      const pct = of ? got / of : 0
-      return pct > best.pct ? { text: row.score, pct } : best
-    }, { text: "0/0", pct: 0 })
+    const bestScore = rows.reduce(
+      (best, row) => {
+        const [got, of] = row.score.split("/").map(Number)
+        const pct = of ? got / of : 0
+        return pct > best.pct ? { text: row.score, pct } : best
+      },
+      { text: "0/0", pct: 0 },
+    )
 
     return {
       stats: {

@@ -51,7 +51,7 @@ export function AdminSchedulesPage() {
 
   return (
     <section className="space-y-6">
-      <PageHeader title="Lịch thi & chạy thử" subtitle="Xác nhận đăng ký của học viên" />
+      <PageHeader title="Duyệt đăng ký ca thi" subtitle="Xác nhận yêu cầu đăng ký ca sát hạch" />
 
       <div className="flex flex-wrap gap-2">
         {TABS.map((tab) => (

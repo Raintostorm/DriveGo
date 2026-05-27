@@ -41,8 +41,22 @@ export class SepayConfigService {
 
   verifyWebhookRequest(req: Request) {
     const configuredKey = this.getWebhookApiKey()
-    if (!configuredKey) {
+    const hmacSecret = this.config.get<string>("SEPAY_WEBHOOK_HMAC_SECRET") ?? ""
+    const strictMode = (this.config.get<string>("NODE_ENV") ?? "development") !== "development"
+
+    if (!configuredKey && !hmacSecret) {
+      if (strictMode) {
+        throw new UnauthorizedException(
+          "SePay webhook auth chưa cấu hình (cần SEPAY_WEBHOOK_API_KEY hoặc SEPAY_WEBHOOK_HMAC_SECRET)",
+        )
+      }
       return
+    }
+
+    if (!configuredKey) {
+      const signature = req.headers["x-sepay-signature"]
+      if (typeof signature === "string" && this.verifyHmac(req, signature)) return
+      throw new UnauthorizedException("SePay webhook không hợp lệ")
     }
 
     const authorization = req.headers.authorization ?? ""

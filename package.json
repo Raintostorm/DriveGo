@@ -26,10 +26,12 @@
     "migrate:admin-ops": "node database/scripts/run-migration.mjs database/migrations/009_admin_ops.sql",
     "migrate:content-admin": "node database/scripts/run-migration.mjs database/migrations/010_content_admin.sql",
     "migrate:class-sessions": "node database/scripts/run-migration.mjs database/migrations/011_class_sessions.sql",
+    "migrate:exam-rules": "node database/scripts/run-migration.mjs database/migrations/012_exam_rules.sql",
     "import:content": "node database/scripts/import-license-content.mjs",
     "bootstrap:content": "node database/scripts/bootstrap-license-content.mjs",
     "import:content:all": "node database/scripts/bootstrap-license-content.mjs && node database/scripts/import-all-content.mjs",
     "parse:b2-pdf": "python database/scripts/parse-b2-pdf.py",
+    "parse:motor-pdf": "python database/scripts/parse-motor-pdf.py",
     "setup:env": "node scripts/setup-env.mjs"
   },
   "devDependencies": {

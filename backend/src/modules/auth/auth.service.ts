@@ -45,7 +45,7 @@ export class AuthService {
       throw new ConflictException("Email đã được sử dụng")
     }
 
-    const role = dto.role ?? UserRole.STUDENT
+    const role = UserRole.STUDENT
     const passwordHash = await bcrypt.hash(dto.password, 10)
 
     const user = this.usersRepo.create({

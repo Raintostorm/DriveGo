@@ -1,9 +1,10 @@
-import { Injectable, NotFoundException } from "@nestjs/common"
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common"
 import { InjectRepository } from "@nestjs/typeorm"
 import { Repository } from "typeorm"
 import { PremiumService } from "../../common/premium.service"
 import { ChatMessage } from "../../entities/chat-message.entity"
 import { ChatSession } from "../../entities/chat-session.entity"
+import { GeminiService } from "./gemini.service"
 
 const DEMO_REPLIES: Record<string, string> = {
   default:
@@ -23,6 +24,7 @@ export class ChatService {
     @InjectRepository(ChatMessage)
     private readonly messagesRepo: Repository<ChatMessage>,
     private readonly premium: PremiumService,
+    private readonly gemini: GeminiService,
   ) {}
 
   async listSessions(userId: string) {
@@ -72,11 +74,42 @@ export class ChatService {
     const welcome = this.messagesRepo.create({
       sessionId: session.id,
       role: "assistant",
-      content: "Xin chào! Tôi là trợ lý pháp lý DriveGo — hỏi tôi về luật giao thông nhé.",
+      content: this.gemini.isConfigured()
+        ? "Xin chào! Tôi là trợ lý AI DriveGo (Gemini) — hỏi tôi về luật giao thông và ôn GPLX nhé."
+        : "Xin chào! Tôi là trợ lý DriveGo — hỏi tôi về luật giao thông nhé.",
     })
     await this.messagesRepo.save(welcome)
 
     return this.getSession(userId, session.id)
+  }
+
+  private demoReply(content: string): string {
+    const lower = content.toLowerCase()
+    if (lower.includes("đèn đỏ")) return DEMO_REPLIES["đèn đỏ"]
+    if (lower.includes("cồn") || lower.includes("rượu")) return DEMO_REPLIES.cồn
+    if (lower.includes("điểm liệt")) return DEMO_REPLIES["điểm liệt"]
+    return DEMO_REPLIES.default
+  }
+
+  private async buildReply(sessionId: string, userContent: string): Promise<string> {
+    if (!this.gemini.isConfigured()) {
+      return this.demoReply(userContent)
+    }
+
+    const prior = await this.messagesRepo.find({
+      where: { sessionId },
+      order: { createdAt: "ASC" },
+      take: 20,
+    })
+
+    const history = prior
+      .filter((m) => m.role === "user" || m.role === "assistant")
+      .map((m) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      }))
+
+    return this.gemini.generateReply(history, userContent)
   }
 
   async sendMessage(userId: string, sessionId: string, content: string) {
@@ -87,18 +120,19 @@ export class ChatService {
     })
     if (!session) throw new NotFoundException("Không tìm thấy phiên chat")
 
+    const trimmed = content.trim()
+    if (!trimmed) {
+      throw new BadRequestException("Nội dung tin nhắn trống")
+    }
+
+    const reply = await this.buildReply(sessionId, trimmed)
+
     const userMsg = this.messagesRepo.create({
       sessionId,
       role: "user",
-      content,
+      content: trimmed,
     })
     await this.messagesRepo.save(userMsg)
-
-    const lower = content.toLowerCase()
-    let reply = DEMO_REPLIES.default
-    if (lower.includes("đèn đỏ")) reply = DEMO_REPLIES["đèn đỏ"]
-    else if (lower.includes("cồn") || lower.includes("rượu")) reply = DEMO_REPLIES.cồn
-    else if (lower.includes("điểm liệt")) reply = DEMO_REPLIES["điểm liệt"]
 
     const assistantMsg = this.messagesRepo.create({
       sessionId,
@@ -108,7 +142,7 @@ export class ChatService {
     await this.messagesRepo.save(assistantMsg)
 
     return {
-      user: { role: "user", content },
+      user: { role: "user", content: trimmed },
       assistant: { role: "assistant", content: reply },
     }
   }

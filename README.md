@@ -32,8 +32,17 @@ npm run dev:be       # chỉ backend
 ## Env
 
 - `frontend/.env.example` — `VITE_API_URL`
-- `backend/.env.example` — `PORT`, `CORS_ORIGIN`, `DATABASE_URL`, `JWT_SECRET`
+- `backend/.env.example`
+  - **Required:** `PORT`, `CORS_ORIGIN`, `DATABASE_URL`, `JWT_SECRET` (strong secret, no default)
+  - **Payments:** `SEPAY_*` + `SEPAY_WEBHOOK_HMAC_SECRET` (recommended for webhook auth)
+  - **AI Chat:** `GEMINI_API_KEY`, `GEMINI_MODEL`
 - `database/.env.example` — `DATABASE_URL` (khi có DB)
+
+## Security notes
+
+- Không commit file `.env` hoặc bất kỳ API key/secret thật lên Git.
+- Nếu key đã lộ (chat/screenshot/log), hãy rotate ngay trên nhà cung cấp.
+- Webhook SePay nên bật HMAC (`SEPAY_WEBHOOK_HMAC_SECRET`) ở môi trường non-local.
 
 ## Tài liệu
 
@@ -47,9 +56,16 @@ npm run dev:be       # chỉ backend
 ```bash
 npm run setup:env    # tạo .env từ example
 npm run test:db      # kiểm tra kết nối PostgreSQL
+npm run parse:b2-pdf # PDF 600 câu (B2) ở thư mục gốc
+npm run parse:motor-pdf # PDF 250 câu (A1/A2) ở thư mục gốc
 npm run seed:db      # tài khoản demo + dữ liệu mẫu
-npm run reset:db     # làm sạch DB + migration + seed + import A1–B2
+npm run bootstrap:content
+npm run migrate:exam-rules
+npm run import:content:all
+npm run reset:db     # truncate + migrations + seed + bootstrap + import
 ```
+
+Quy tắc thi: A1/A2 — 25 câu, 19 phút, đạt 21/25; B1/B2 — 30 câu, 22 phút, đạt 26/30. Xem [database/content/README.md](database/content/README.md).
 
 Chi tiết: [docs/HUONG-DAN-CAI-DAT.md](docs/HUONG-DAN-CAI-DAT.md), [database/seeds/README.md](database/seeds/README.md).
 

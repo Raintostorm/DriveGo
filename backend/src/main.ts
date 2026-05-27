@@ -5,8 +5,14 @@ import { ConfigService } from "@nestjs/config"
 import { AppModule } from "./app.module"
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule)
+  const app = await NestFactory.create(AppModule, { rawBody: true })
   const config = app.get(ConfigService)
+  const jwtSecret = config.get<string>("JWT_SECRET")?.trim()
+  if (!jwtSecret || jwtSecret === "change-me" || jwtSecret.length < 16) {
+    throw new Error(
+      "JWT_SECRET must be configured with at least 16 characters (and cannot be 'change-me').",
+    )
+  }
 
   app.setGlobalPrefix("api")
   app.useGlobalPipes(

@@ -18,10 +18,14 @@ export type AuthUser = {
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(config: ConfigService) {
+    const secret = config.get<string>("JWT_SECRET")?.trim()
+    if (!secret) {
+      throw new Error("Missing JWT_SECRET in environment")
+    }
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: config.get<string>("JWT_SECRET", "change-me"),
+      secretOrKey: secret,
     })
   }
 

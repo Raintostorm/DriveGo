@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom"
-import { PrimaryButton } from "./PrimaryButton.jsx"
 import { UiCard } from "./UiCard.jsx"
 
 /**
@@ -14,11 +13,17 @@ export function EnrollCourseCta({ licenseClass }) {
         bài thi thử. Premium là tùy chọn, không bắt buộc.
       </p>
       <div className="mt-6 flex flex-wrap justify-center gap-3">
-        <Link to={`/enroll?class=${encodeURIComponent(licenseClass)}`}>
-          <PrimaryButton variant="action">Đăng ký & thanh toán</PrimaryButton>
+        <Link
+          to={`/enroll?class=${encodeURIComponent(licenseClass)}`}
+          className="rounded-drive-pill bg-drive-action px-6 py-3 text-sm font-bold text-white shadow-drive-action transition hover:brightness-110"
+        >
+          Đăng ký & thanh toán
         </Link>
-        <Link to="/pricing">
-          <PrimaryButton variant="outline">Xem bảng giá</PrimaryButton>
+        <Link
+          to="/pricing"
+          className="rounded-drive-pill border border-drive-border bg-drive-elevated px-6 py-3 text-sm font-bold text-white transition hover:bg-drive-panel"
+        >
+          Xem bảng giá
         </Link>
       </div>
     </UiCard>

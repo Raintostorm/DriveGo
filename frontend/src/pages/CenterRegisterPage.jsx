@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom"
-import { PrimaryButton } from "../components/PrimaryButton.jsx"
 import { UiCard } from "../components/UiCard.jsx"
 import { t } from "../lib/strings.js"
 
@@ -19,31 +18,30 @@ export function CenterRegisterPage() {
         </div>
       </header>
 
-      <form className="space-y-5" onSubmit={(e) => e.preventDefault()}>
-        {[
-          ["1", t("pages.centerRegister.section1"), ["Tên trung tâm", "Mã số thuế", "Thành phố", "Địa chỉ"]],
-          ["2", t("pages.centerRegister.section2"), ["Họ và tên đại diện", "Số điện thoại", "Email"]],
-          ["3", t("pages.centerRegister.section3"), ["Email đăng nhập", "Mật khẩu", "Xác nhận mật khẩu"]],
-        ].map(([num, title, fields]) => (
-          <UiCard key={num} variant="panel">
-            <h2 className="text-lg font-semibold text-white">
-              {num}. {title}
-            </h2>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              {fields.map((f) => (
-                <input
-                  key={f}
-                  placeholder={f}
-                  className="rounded-lg border border-drive-border bg-drive-elevated px-3 py-2.5 text-sm text-drive-text outline-none focus:ring-2 focus:ring-drive-accent"
-                />
-              ))}
-            </div>
-          </UiCard>
-        ))}
-        <PrimaryButton type="submit" variant="action" fullWidth>
-          {t("pages.centerRegister.submit")}
-        </PrimaryButton>
-      </form>
+      <UiCard variant="panel" className="space-y-4 text-center">
+        <h2 className="text-lg font-semibold text-white">Đăng ký trung tâm qua DriveGo</h2>
+        <p className="text-sm leading-relaxed text-drive-muted">
+          Tài khoản quản trị trung tâm do bộ phận vận hành DriveGo cấp sau khi hợp tác. Nếu bạn là
+          đại diện trung tâm lái xe, vui lòng liên hệ để được tạo tài khoản và gắn dữ liệu học viên.
+        </p>
+        <div className="flex flex-wrap justify-center gap-3">
+          <Link
+            to="/login"
+            className="rounded-drive-pill bg-drive-action px-6 py-3 text-sm font-bold text-white shadow-drive-action transition hover:brightness-110"
+          >
+            Đăng nhập quản trị
+          </Link>
+          <a
+            href="mailto:support@drivego.demo"
+            className="rounded-drive-pill border border-drive-border bg-drive-elevated px-6 py-3 text-sm font-bold text-white transition hover:bg-drive-panel"
+          >
+            Liên hệ hỗ trợ
+          </a>
+        </div>
+        <p className="text-xs text-drive-placeholder">
+          Quản trị viên hệ thống: tạo trung tâm tại menu Trung tâm sau khi đăng nhập admin.
+        </p>
+      </UiCard>
     </section>
   )
 }

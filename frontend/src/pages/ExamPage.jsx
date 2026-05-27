@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { EnrollCourseCta } from "../components/EnrollCourseCta.jsx"
 import { EnrollmentConsentCard } from "../components/EnrollmentConsentCard.jsx"
@@ -9,7 +9,11 @@ import { useLicense } from "../context/LicenseContext.jsx"
 import { apiFetch } from "../lib/api.js"
 import { t } from "../lib/strings.js"
 
-const EXAM_MINUTES = 22
+const DEFAULT_EXAM_RULES = {
+  questionsPerExam: 30,
+  durationMinutes: 22,
+  passMinCorrect: 26,
+}
 
 function formatTime(seconds) {
   const m = Math.floor(seconds / 60)
@@ -19,8 +23,11 @@ function formatTime(seconds) {
 
 export function ExamPage() {
   const navigate = useNavigate()
-  const { activeClass, isEnrolled, enrollmentsLoading } = useLicense()
+  const { activeClass, activeEntry, isEnrolled, enrollmentsLoading } = useLicense()
   const enrolled = isEnrolled(activeClass)
+  const examRules = activeEntry?.examRules ?? DEFAULT_EXAM_RULES
+  const durationSeconds = (examRules.durationMinutes ?? 22) * 60
+
   const [paper, setPaper] = useState(null)
   const [papers, setPapers] = useState([])
   const [examContentReady, setExamContentReady] = useState(false)
@@ -29,11 +36,17 @@ export function ExamPage() {
   const [error, setError] = useState(null)
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState({})
-  const [confirmed, setConfirmed] = useState({})
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState(null)
-  const [startedAt] = useState(() => new Date().toISOString())
-  const [secondsLeft, setSecondsLeft] = useState(EXAM_MINUTES * 60)
+  const [startedAt, setStartedAt] = useState(() => new Date().toISOString())
+  const [secondsLeft, setSecondsLeft] = useState(durationSeconds)
+  const autoSubmittedRef = useRef(false)
+
+  useEffect(() => {
+    setSecondsLeft(durationSeconds)
+    autoSubmittedRef.current = false
+  }, [durationSeconds, selectedPaperId])
+
   useEffect(() => {
     if (!enrolled) return undefined
     let cancelled = false
@@ -65,9 +78,10 @@ export function ExamPage() {
           setPaper(detail)
           setCurrentIndex(0)
           setAnswers({})
-          setConfirmed({})
           setResult(null)
           setError(null)
+          setStartedAt(new Date().toISOString())
+          autoSubmittedRef.current = false
         }
       })
       .catch((err) => {
@@ -81,41 +95,13 @@ export function ExamPage() {
     }
   }, [selectedPaperId, enrolled, activeClass])
 
-  useEffect(() => {
-    if (!paper || result) return undefined
-    const timer = setInterval(() => {
-      setSecondsLeft((s) => (s <= 1 ? 0 : s - 1))
-    }, 1000)
-    return () => clearInterval(timer)
-  }, [paper, result])
-
   const questions = paper?.questions ?? []
   const question = questions[currentIndex]
+  const passMin = paper?.examRules?.passMinCorrect ?? examRules.passMinCorrect ?? 26
+  const totalQuestions = questions.length || examRules.questionsPerExam
 
-  const { correctCount, wrongCount } = useMemo(() => {
-    let correct = 0
-    let wrong = 0
-    for (const q of questions) {
-      if (confirmed[q.id] === undefined) continue
-      if (confirmed[q.id]) correct += 1
-      else wrong += 1
-    }
-    return { correctCount: correct, wrongCount: wrong }
-  }, [questions, confirmed])
-
-  const handleConfirm = useCallback(() => {
-    if (!question) return
-    const selected = answers[question.id]
-    if (selected === undefined) return
-    const isCorrect = selected === question.correctIndex
-    setConfirmed((prev) => ({ ...prev, [question.id]: isCorrect }))
-    if (currentIndex < questions.length - 1) {
-      setTimeout(() => setCurrentIndex((i) => i + 1), 400)
-    }
-  }, [question, answers, questions.length, currentIndex])
-
-  async function handleSubmitExam() {
-    if (!paper) return
+  const handleSubmitExam = useCallback(async () => {
+    if (!paper || submitting || result) return
     setSubmitting(true)
     setError(null)
     try {
@@ -134,7 +120,26 @@ export function ExamPage() {
     } finally {
       setSubmitting(false)
     }
-  }
+  }, [paper, submitting, result, questions, answers, startedAt])
+
+  useEffect(() => {
+    if (!paper || result) return undefined
+    const timer = setInterval(() => {
+      setSecondsLeft((s) => (s <= 1 ? 0 : s - 1))
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [paper, result])
+
+  useEffect(() => {
+    if (!paper || result || secondsLeft > 0 || autoSubmittedRef.current) return
+    autoSubmittedRef.current = true
+    handleSubmitExam()
+  }, [paper, result, secondsLeft, handleSubmitExam])
+
+  const answeredCount = useMemo(
+    () => questions.filter((q) => answers[q.id] !== undefined).length,
+    [questions, answers],
+  )
 
   if (enrollmentsLoading) return <p className="text-drive-muted">Đang kiểm tra đăng ký khóa…</p>
 
@@ -180,6 +185,7 @@ export function ExamPage() {
         </p>
         <p className="mt-2 text-sm text-drive-muted">
           Cần tối thiểu {result.passThreshold}/{result.total} điểm và không sai câu điểm liệt
+          {result.failedCritical ? " (bạn đã sai câu điểm liệt)." : "."}
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <PrimaryButton variant="action" onClick={() => navigate("/history")}>
@@ -197,10 +203,26 @@ export function ExamPage() {
 
   const allAnswered = questions.every((q) => answers[q.id] !== undefined)
   const isLast = currentIndex === questions.length - 1
-  const locked = confirmed[question.id] !== undefined
+  const progressPct = totalQuestions ? Math.round((answeredCount / totalQuestions) * 100) : 0
 
   const examUi = (
     <section className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+      <div className="lg:col-span-2 space-y-2">
+        <p className="text-sm text-drive-muted">
+          Hạng {activeClass} · {totalQuestions} câu · {examRules.durationMinutes} phút · Đạt từ{" "}
+          {passMin}/{totalQuestions} + không sai điểm liệt
+        </p>
+        <div className="h-2 overflow-hidden rounded-full bg-drive-elevated">
+          <div
+            className="h-full bg-drive-action transition-all duration-300"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+        <p className="text-xs text-drive-muted">
+          Đã trả lời {answeredCount}/{totalQuestions} câu
+        </p>
+      </div>
+
       {papers.length > 1 ? (
         <div className="lg:col-span-2">
           <select
@@ -216,6 +238,7 @@ export function ExamPage() {
           </select>
         </div>
       ) : null}
+
       <UiCard variant="panel" className="space-y-4">
         <header className="flex flex-wrap items-start justify-between gap-2 rounded-drive border border-drive-border-soft bg-drive-sidebar p-4">
           <div>
@@ -242,25 +265,20 @@ export function ExamPage() {
         <div className="space-y-3">
           {question.answers.map((answer, idx) => {
             const selected = answers[question.id] === idx
-            let borderClass = "border-drive-border hover:border-drive-action"
-            if (selected) borderClass = "border-drive-action bg-drive-action/10"
-            if (locked && idx === question.correctIndex) {
-              borderClass = "border-drive-success bg-drive-success/10"
-            } else if (locked && selected && !confirmed[question.id]) {
-              borderClass = "border-drive-danger bg-drive-danger/10"
-            }
+            const borderClass = selected
+              ? "border-drive-action bg-drive-action/10"
+              : "border-drive-border hover:border-drive-action"
 
             return (
               <label
-                key={answer}
-                className={`flex cursor-pointer items-start gap-3 rounded-drive border bg-drive-elevated p-3 text-sm text-drive-text transition ${borderClass} ${locked ? "pointer-events-none opacity-90" : ""}`}
+                key={`${question.id}-${idx}`}
+                className={`flex cursor-pointer items-start gap-3 rounded-drive border bg-drive-elevated p-3 text-sm text-drive-text transition ${borderClass}`}
               >
                 <input
                   type="radio"
                   name={`q-${question.id}`}
                   className="mt-1 accent-drive-action"
                   checked={selected}
-                  disabled={locked}
                   onChange={() => setAnswers((prev) => ({ ...prev, [question.id]: idx }))}
                 />
                 <span>{answer}</span>
@@ -282,20 +300,15 @@ export function ExamPage() {
               Câu sau
             </PrimaryButton>
           ) : null}
-          {!locked ? (
-            <PrimaryButton
-              variant="action"
-              disabled={answers[question.id] === undefined}
-              onClick={handleConfirm}
-            >
-              Xác nhận câu trả lời
-            </PrimaryButton>
-          ) : null}
-          {isLast && allAnswered ? (
-            <PrimaryButton variant="action" disabled={submitting} onClick={handleSubmitExam}>
+          {allAnswered ? (
+            <PrimaryButton variant="action" disabled={submitting || secondsLeft === 0} onClick={handleSubmitExam}>
               {submitting ? "Đang nộp…" : "Nộp bài"}
             </PrimaryButton>
-          ) : null}
+          ) : (
+            <span className="self-center text-xs text-drive-muted">
+              Trả lời đủ {totalQuestions} câu để nộp bài
+            </span>
+          )}
         </div>
         {error ? (
           <p className="text-sm text-drive-danger">
@@ -305,9 +318,9 @@ export function ExamPage() {
                 Nâng cấp ngay
               </Link>
             ) : null}
-            {error.includes("hồ sơ") ? (
-              <Link to="/application" className="font-medium text-drive-action underline">
-                Nộp hồ sơ
+            {error.includes("đăng ký") && error.includes("khóa") ? (
+              <Link to="/enroll" className="font-medium text-drive-action underline">
+                Đăng ký khóa
               </Link>
             ) : null}
           </p>
@@ -341,22 +354,18 @@ export function ExamPage() {
           >
             {formatTime(secondsLeft)}
           </p>
+          {secondsLeft === 0 ? (
+            <p className="mt-1 text-xs text-drive-danger">Hết giờ — đang nộp bài…</p>
+          ) : null}
         </UiCard>
         <UiCard variant="panel">
-          <p className="text-sm text-drive-muted">{t("pages.exam.tempResult")}</p>
-          <div className="mt-3 flex gap-3">
-            <div className="flex-1 rounded-drive bg-drive-success/10 p-3 text-center">
-              <p className="text-xl font-bold text-drive-success">{correctCount}</p>
-              <p className="text-xs text-drive-muted">{t("pages.exam.correct")}</p>
-            </div>
-            <div className="flex-1 rounded-drive bg-drive-danger/10 p-3 text-center">
-              <p className="text-xl font-bold text-drive-danger">{wrongCount}</p>
-              <p className="text-xs text-drive-muted">{t("pages.exam.wrong")}</p>
-            </div>
-          </div>
+          <p className="text-sm text-drive-muted">Tiến độ làm bài</p>
+          <p className="mt-2 text-2xl font-bold text-drive-action">
+            {answeredCount}/{totalQuestions}
+          </p>
         </UiCard>
         <UiCard variant="panel" className="text-sm text-drive-muted">
-          <p>{t("license.examAside", { count: String(questions.length), code: activeClass })}</p>
+          <p>{t("license.examAside", { count: String(totalQuestions), code: activeClass })}</p>
           <Link to="/theory" className="mt-2 inline-block text-drive-action hover:underline">
             Ôn lý thuyết trước khi thi
           </Link>

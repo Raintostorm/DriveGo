@@ -123,15 +123,24 @@ async function seed() {
   )
 
   await client.query(
-    `INSERT INTO license_classes (id, code, price, enrollment_fee, description) VALUES
-     ($1, 'A1', 799000, 5000, 'Bằng A1 — xe máy'),
-     ($2, 'A2', 1500000, 5000, 'Bằng A2'),
-     ($3, 'B1', 12000000, 5000, 'Bằng B1'),
-     ($4, 'B2', 15000000, 5000, 'Bằng B2 — phổ biến nhất')
+    `INSERT INTO license_classes (
+       id, code, price, enrollment_fee, description,
+       questions_per_exam, exam_duration_minutes, pass_min_correct,
+       bank_question_count, papers_count
+     ) VALUES
+     ($1, 'A1', 799000, 5000, 'Bằng A1 — xe máy', 25, 19, 21, 250, 10),
+     ($2, 'A2', 1500000, 5000, 'Bằng A2', 25, 19, 21, 250, 10),
+     ($3, 'B1', 12000000, 5000, 'Bằng B1', 30, 22, 26, 600, 20),
+     ($4, 'B2', 15000000, 5000, 'Bằng B2 — phổ biến nhất', 30, 22, 26, 600, 20)
      ON CONFLICT (code) DO UPDATE SET
        price = EXCLUDED.price,
        enrollment_fee = EXCLUDED.enrollment_fee,
-       description = EXCLUDED.description`,
+       description = EXCLUDED.description,
+       questions_per_exam = EXCLUDED.questions_per_exam,
+       exam_duration_minutes = EXCLUDED.exam_duration_minutes,
+       pass_min_correct = EXCLUDED.pass_min_correct,
+       bank_question_count = EXCLUDED.bank_question_count,
+       papers_count = EXCLUDED.papers_count`,
     [ID.licenseA1, ID.licenseA2, ID.licenseB1, ID.licenseB2],
   )
 

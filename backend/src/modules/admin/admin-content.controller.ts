@@ -9,7 +9,6 @@ import { AdminContentService } from "./admin-content.service"
 
 @Controller("admin")
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles("center_admin", "system_admin")
 export class AdminContentController {
   constructor(
     private readonly service: AdminContentService,
@@ -18,11 +17,13 @@ export class AdminContentController {
   ) {}
 
   @Get("license-classes/manage")
+  @Roles("center_admin", "system_admin")
   listClasses() {
     return this.service.listLicenseClasses()
   }
 
   @Patch("license-classes/:code")
+  @Roles("system_admin")
   async patchClass(
     @Param("code") code: string,
     @Body() body: { price?: number; enrollmentFee?: number; description?: string },
@@ -37,11 +38,13 @@ export class AdminContentController {
   }
 
   @Get("chapters/by-class/:code")
+  @Roles("center_admin", "system_admin")
   chaptersByClass(@Param("code") code: string) {
     return this.service.listChapters(code)
   }
 
   @Patch("chapters/:id")
+  @Roles("system_admin")
   patchChapter(
     @Param("id") id: string,
     @Body()

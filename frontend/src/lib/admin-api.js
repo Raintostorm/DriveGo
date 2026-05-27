@@ -1,4 +1,4 @@
-import { apiBaseUrl, apiFetch, apiFetchBlob, getAuthToken } from "./api.js"
+import { apiFetch, apiFetchBlob } from "./api.js"
 
 export function adminDownloadDocument(documentId, filename) {
   return apiFetchBlob(`/admin/applications/documents/${documentId}/file`).then((blob) => {
@@ -12,9 +12,11 @@ export function adminDownloadDocument(documentId, filename) {
 }
 
 export function adminOpenDocument(documentId) {
-  const token = getAuthToken()
-  const url = `${apiBaseUrl}/admin/applications/documents/${documentId}/file`
-  window.open(token ? `${url}?token=${encodeURIComponent(token)}` : url, "_blank")
+  return apiFetchBlob(`/admin/applications/documents/${documentId}/file`).then((blob) => {
+    const url = URL.createObjectURL(blob)
+    window.open(url, "_blank", "noopener,noreferrer")
+    setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  })
 }
 
 export async function fetchAdminSummary() {

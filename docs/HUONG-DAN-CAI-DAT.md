@@ -84,7 +84,7 @@ psql "postgresql://postgres:MAT_KHAU@localhost:5432/DriveGo" -f database/schema/
 
 2. Chạy migration bổ sung (theo thứ tự, hoặc dùng `reset:db` ở bước 5 nếu đã có schema).
 
-Các file migration nằm trong `database/migrations/` (`001` … `011`). Script root hỗ trợ từng file, ví dụ:
+Các file migration nằm trong `database/migrations/` (`001` … `012`). Script root hỗ trợ từng file, ví dụ:
 
 ```bash
 npm run migrate:applications
@@ -104,7 +104,7 @@ npm run reset:db
 Lệnh này sẽ:
 
 1. `TRUNCATE` tất cả bảng `public`
-2. Áp lại migration `001`–`011` (idempotent)
+2. Áp lại migration `001`–`012` (idempotent)
 3. `npm run seed:db` — tài khoản demo + dữ liệu mẫu
 4. `npm run import:content:all` — chương lý thuyết + đề thi A1–B2
 

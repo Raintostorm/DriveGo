@@ -11,5 +11,12 @@ export const adminNavItems = [
 ]
 
 export function navItemsForRole(role) {
-  return adminNavItems.filter((item) => !item.systemOnly || role === "system_admin")
+  return adminNavItems
+    .filter((item) => !item.systemOnly || role === "system_admin")
+    .map((item) => {
+      if (role === "center_admin" && item.to === "/admin/courses") {
+        return { ...item, labelKey: "nav.adminCoursesReadOnly" }
+      }
+      return item
+    })
 }

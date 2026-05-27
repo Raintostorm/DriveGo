@@ -137,6 +137,10 @@ writeEnv("backend/.env", [
   `SEPAY_BANK_NAME=${backendEnv.SEPAY_BANK_NAME ?? ""}`,
   `SEPAY_BANK_ACCOUNT=${backendEnv.SEPAY_BANK_ACCOUNT ?? ""}`,
   `SEPAY_ACCOUNT_HOLDER=${backendEnv.SEPAY_ACCOUNT_HOLDER ?? ""}`,
+  "",
+  "# Google Gemini — AI Chat",
+  `GEMINI_API_KEY=${backendEnv.GEMINI_API_KEY ?? ""}`,
+  `GEMINI_MODEL=${backendEnv.GEMINI_MODEL ?? "gemini-2.0-flash"}`,
 ])
 
 const databaseEnv = mergeDefined(

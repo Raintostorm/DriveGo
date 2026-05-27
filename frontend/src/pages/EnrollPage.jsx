@@ -108,11 +108,17 @@ export function EnrollPage() {
           <h1 className="text-2xl font-bold text-white">Đã đăng ký khóa {licenseClass}</h1>
           <p className="mt-2 text-sm text-drive-muted">Bạn có thể học lý thuyết và làm bài thi thử.</p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <Link to="/theory">
-              <PrimaryButton variant="action">Học lý thuyết</PrimaryButton>
+            <Link
+              to="/theory"
+              className="rounded-drive-pill bg-drive-action px-6 py-3 text-sm font-bold text-white shadow-drive-action transition hover:brightness-110"
+            >
+              Học lý thuyết
             </Link>
-            <Link to="/exam">
-              <PrimaryButton variant="outline">Thi thử</PrimaryButton>
+            <Link
+              to="/exam"
+              className="rounded-drive-pill border border-drive-border bg-drive-elevated px-6 py-3 text-sm font-bold text-white transition hover:bg-drive-panel"
+            >
+              Thi thử
             </Link>
           </div>
         </UiCard>

@@ -1,7 +1,12 @@
-import { ForbiddenException, Injectable, NotFoundException } from "@nestjs/common"
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common"
 import { InjectRepository } from "@nestjs/typeorm"
-import { Repository } from "typeorm"
-import { ScheduleSlot } from "../../entities/schedule-slot.entity"
+import { In, Repository } from "typeorm"
+import { ExamRegistration, ScheduleSlot, TrainingCenter } from "../../entities/schedule-slot.entity"
 import { AuthUser } from "../auth/jwt.strategy"
 import { AdminScopeService } from "./admin-scope.service"
 
@@ -10,21 +15,68 @@ export class AdminSlotsService {
   constructor(
     @InjectRepository(ScheduleSlot)
     private readonly slotsRepo: Repository<ScheduleSlot>,
+    @InjectRepository(ExamRegistration)
+    private readonly registrationsRepo: Repository<ExamRegistration>,
+    @InjectRepository(TrainingCenter)
+    private readonly centersRepo: Repository<TrainingCenter>,
     private readonly scope: AdminScopeService,
   ) {}
 
   private async resolveCenterId(admin: AuthUser, dtoCenterId?: string | null) {
     const scoped = await this.scope.getCenterIdForAdmin(admin)
     if (scoped) return scoped
+    if (admin.role === "system_admin") {
+      if (!dtoCenterId) {
+        throw new BadRequestException("System admin cần chọn centerId khi tạo ca thi")
+      }
+      return dtoCenterId
+    }
     return dtoCenterId ?? null
   }
 
   async list(admin: AuthUser, slotType?: string) {
     const centerId = await this.scope.getCenterIdForAdmin(admin)
-    const qb = this.slotsRepo.createQueryBuilder("s").orderBy("s.slot_date", "ASC")
+    const qb = this.slotsRepo
+      .createQueryBuilder("s")
+      .leftJoinAndSelect("s.center", "center")
+      .orderBy("s.slot_date", "ASC")
     if (centerId) qb.andWhere("s.center_id = :centerId", { centerId })
     if (slotType) qb.andWhere("s.slot_type = :slotType", { slotType })
-    return qb.getMany()
+    const slots = await qb.getMany()
+    const slotIds = slots.map((s) => s.id)
+    const heldRows =
+      slotIds.length > 0
+        ? await this.registrationsRepo
+            .createQueryBuilder("r")
+            .select("r.slot_id", "slotId")
+            .addSelect("COUNT(*)", "cnt")
+            .where("r.slot_id IN (:...slotIds)", { slotIds })
+            .andWhere("r.status IN (:...statuses)", {
+              statuses: ["pending", "confirmed"],
+            })
+            .groupBy("r.slot_id")
+            .getRawMany<{ slotId: string; cnt: string }>()
+        : []
+    const heldBySlot = new Map(heldRows.map((r) => [r.slotId, Number(r.cnt)]))
+
+    return slots.map((s) => {
+      const heldSeats = heldBySlot.get(s.id) ?? 0
+      return {
+        id: s.id,
+        slotType: s.slotType,
+        date: s.slotDate,
+        slotDate: s.slotDate,
+        startTime: s.startTime,
+        endTime: s.endTime,
+        venue: s.venue,
+        licenseClass: s.licenseClass,
+        capacity: s.capacity,
+        registeredCount: s.registeredCount,
+        heldSeats,
+        remaining: Math.max(0, s.capacity - heldSeats),
+        centerName: s.center?.name,
+      }
+    })
   }
 
   async create(
@@ -44,8 +96,11 @@ export class AdminSlotsService {
     if (admin.role === "center_admin" && !centerId) {
       throw new ForbiddenException("Tài khoản chưa gắn trung tâm")
     }
+    const center = await this.centersRepo.findOne({ where: { id: centerId! } })
+    if (!center) throw new NotFoundException("Không tìm thấy trung tâm")
+
     const slot = this.slotsRepo.create({
-      centerId,
+      centerId: centerId!,
       slotDate: dto.slotDate,
       startTime: dto.startTime,
       endTime: dto.endTime,

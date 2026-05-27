@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { PageHeader } from "../components/PageHeader.jsx"
-import { PrimaryButton } from "../components/PrimaryButton.jsx"
 import { StatCard } from "../components/StatCard.jsx"
 import { UiCard } from "../components/UiCard.jsx"
 import { useAuth } from "../context/AuthContext.jsx"
@@ -101,10 +100,11 @@ export function StudentDashboardPage() {
               {summary?.chaptersTotal ?? 0} chương
             </p>
           </div>
-          <Link to="/theory">
-            <PrimaryButton variant="action" className="mt-6">
-              {t("pages.studentDashboard.continue")}
-            </PrimaryButton>
+          <Link
+            to="/theory"
+            className="mt-6 inline-block rounded-drive-pill bg-drive-action px-6 py-3 text-sm font-bold text-white shadow-drive-action transition hover:brightness-110"
+          >
+            {t("pages.studentDashboard.continue")}
           </Link>
         </UiCard>
         <UiCard variant="panel" as="article">

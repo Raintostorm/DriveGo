@@ -1,7 +1,6 @@
 import { useMemo } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { BrandLogo } from "../BrandLogo.jsx"
-import { PrimaryButton } from "../PrimaryButton.jsx"
 import { LicenseClassSwitcher } from "../LicenseClassSwitcher.jsx"
 import { SidebarNav } from "../SidebarNav.jsx"
 import { useAuth } from "../../context/AuthContext.jsx"
@@ -56,7 +55,7 @@ export function DashboardLayout({ children, variant = "student" }) {
         <div className="mb-6 hidden px-5 lg:block">
           <BrandLogo />
         </div>
-        <Link to="/home" className="mb-4 flex items-center gap-2 px-2 lg:hidden">
+        <Link to="/" className="mb-4 flex items-center gap-2 px-2 lg:hidden">
           <BrandLogo size="sm" />
         </Link>
         <SidebarNav items={items} />
@@ -79,10 +78,11 @@ export function DashboardLayout({ children, variant = "student" }) {
                 </span>
               </Link>
             ) : (
-              <Link to="/upgrade">
-                <PrimaryButton variant="action" fullWidth>
-                  {t("nav.upgrade")} Premium
-                </PrimaryButton>
+              <Link
+                to="/upgrade"
+                className="block w-full rounded-drive-pill bg-drive-action px-6 py-3 text-center text-sm font-bold text-white shadow-drive-action transition hover:brightness-110"
+              >
+                {t("nav.upgrade")} Premium
               </Link>
             )
           ) : null}
